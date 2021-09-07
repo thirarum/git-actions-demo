@@ -16,7 +16,6 @@ jobs:
           ls ${{ github.workspace }}
       - run: echo "This job's status is ${{ job.status }}."
       - name: set-k8s-context
-        if: ${{ github.ref == 'refs/heads/master' }}
         uses: azure/k8s-set-context@v1
         with:
           method: kubeconfig
