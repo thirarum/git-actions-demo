@@ -20,5 +20,5 @@ jobs:
         with:
           method: kubeconfig
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-        run: |
-          kubectl get nodes
+      - name: Run kubectl
+        run: kubectl get nodes
