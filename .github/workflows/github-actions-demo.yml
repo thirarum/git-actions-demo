@@ -4,16 +4,20 @@ jobs:
   Explore-GitHub-Actions:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
-        uses: actions/checkout@v2
-      - run: echo "The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "The workflow is now ready to test your code on the runner."
-      - name: List files in the repository
+      - name: Write Config & Key Files
         run: |
-          ls ${{ github.workspace }}
+          mkdir ~/.oci
+          echo "[DEFAULT]" >> ~/.oci/config
+          echo "user=${{secrets.OCI_USER_OCID}}" >> ~/.oci/config
+          echo "fingerprint=${{secrets.OCI_FINGERPRINT}}" >> ~/.oci/config
+          echo "region=${{secrets.OCI_REGION}}" >> ~/.oci/config
+          echo "tenancy=${{secrets.OCI_TENANCY_OCID}}" >> ~/.oci/config
+          echo "key_file=~/.oci/key.pem" >> ~/.oci/config
+          echo "${{secrets.OCI_KEY_FILE}}" >> ~/.oci/key.pem
+          echo "========================================="
+          cd ~ && pwd
+          whoami
+          echo "========================================="
       - name: Install OCI CLI
         run: |
           curl -L -O https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh
@@ -21,3 +25,9 @@ jobs:
           ./install.sh --accept-all-defaults
           echo "::add-path::/home/runner/bin"
           exec -l $SHELL
+      - name: 'Fix Config File Permissions'
+        run: |
+          oci setup repair-file-permissions --file ~/.oci/config
+          oci setup repair-file-permissions --file ~/.oci/key.pem
+      - name: Run OCI CLI
+        run: oci os ns get
