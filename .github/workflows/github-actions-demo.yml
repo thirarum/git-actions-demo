@@ -25,11 +25,48 @@ jobs:
         run: |
           oci setup repair-file-permissions --file ~/.oci/config
           oci setup repair-file-permissions --file ~/.oci/key.pem
-      - name: Setup OKE Cluster
+      - name: Setting up Virtual Cloud Network (VCN)
         run: |
           echo "Setting up Virtual Cloud Network (VCN)"
+          
           echo "Getting Compartment ID"
           CMD="oci iam compartment list --compartment-id-in-subtree TRUE --all --query 'data[?\"name\"==\`COMPARTMENT_NAME\`].id'"
-          CMD=$(sed -e "s/\COMPARTMENT_NAME/$COMPARTMENT_NAME/g" <<< $CMD)
+          CMD=$(sed -e "s/\COMPARTMENT_NAME/${{secrets.COMPARTMENT_NAME}}/g" <<< $CMD)
           COMPARTMENT_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
+          echo "COMPARTMENT_ID=${COMPARTMENT_ID}" >> $GITHUB_ENV
           echo $COMPARTMENT_ID
+          
+          echo "Create VCN"
+          VCN_ID=$(oci network vcn create --compartment-id ${{secrets.COMPARTMENT_NAME}} --cidr-block 10.0.0.0/16 \
+            --display-name ${{secrets.VCN_NAME}} --dns-label ${{secrets.DNS_LABEL}} --query data.id --raw-output)
+          echo "VCN_ID=${VCN_ID}" >> $GITHUB_ENV
+
+          echo "Create Internet Gateway"
+          IGW_ID=$(oci network internet-gateway create --compartment-id $COMPARTMENT_ID --vcn-id $VCN_ID \
+            --is-enabled true --display-name internet-gateway-oke --query data.id --raw-output)
+          echo "IGW_ID=${IGW_ID}" >> $GITHUB_ENV
+
+          echo "Retrieve default Route table of the VCN"
+          echo "DRT="Default Route Table for " >> $GITHUB_ENV
+          CMD="oci network route-table list --compartment-id $COMPARTMENT_ID --vcn-id $VCN_ID \
+            --query 'data[?\"display-name\"==\`DEFAULT_ROUTE_TABLE_NAME\`].id'"
+          CMD=$(sed -e "s/\DEFAULT_ROUTE_TABLE_NAME/${DRT}${{secrets.VCN_NAME}}/g" <<< $CMD)
+          DEF_ROUTE_TABLE_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g' | sed 's/,//g'"))
+          echo "DEF_ROUTE_TABLE_ID=${DEF_ROUTE_TABLE_ID}" >> $GITHUB_ENV
+
+          echo "Update Default Route table with Internet Gateway"
+          CMD="oci network route-table update --rt-id $DEF_ROUTE_TABLE_ID \
+            --route-rules '[{\"cidrBlock\":\"0.0.0.0/0\",\"networkEntityId\":\"IGW_ID\"}]' --force"
+          CMD=$(sed -e "s/\IGW_ID/${IGW_ID}/g" <<< $CMD)
+          eval $(echo $CMD)
+          
+          echo "Create Security Ingress / Egress Rules for API Endpoint, Nodes and LB"
+          oci network security-list create --compartment-id $COMPARTMENT_ID --vcn-id $VCN_ID \
+            --display-name api-endpoint-sec-list --ingress-security-rules file:///home/runner/seclist/api-endpoint-sec-list_ingress.json \
+            --egress-security-rules file:///home/runner/seclist/api-endpoint-sec-list_egress.json
+          API_ENDPOINT_SEC_LIST_ID=$(oci network security-list list --compartment-id $COMPARTMENT_ID \
+            --vcn-id $VCN_ID --query 'data[?"display-name"==`api-endpoint-sec-list`].id' | grep ocid | \
+            sed 's/"//g' | sed 's/ //g' | sed 's/,//g')
+          echo "API_ENDPOINT_SEC_LIST_ID=${API_ENDPOINT_SEC_LIST_ID}" >> $GITHUB_ENV
+
+
