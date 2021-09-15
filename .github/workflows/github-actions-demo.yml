@@ -40,32 +40,3 @@ jobs:
           echo "VCN_ID=${VCN_ID}" >> $GITHUB_ENV
           echo ${VCN_ID}
 
-          echo "Create Internet Gateway"
-          IGW_ID=$(oci network internet-gateway create --compartment-id $COMPARTMENT_ID --vcn-id $VCN_ID \
-            --is-enabled true --display-name internet-gateway-oke --query data.id --raw-output)
-          echo "IGW_ID=${IGW_ID}" >> $GITHUB_ENV
-
-          echo "Retrieve default Route table of the VCN"
-          echo "DRT="Default Route Table for " >> $GITHUB_ENV
-          CMD="oci network route-table list --compartment-id $COMPARTMENT_ID --vcn-id $VCN_ID \
-            --query 'data[?\"display-name\"==\`DEFAULT_ROUTE_TABLE_NAME\`].id'"
-          CMD=$(sed -e "s/\DEFAULT_ROUTE_TABLE_NAME/${DRT}${{secrets.VCN_NAME}}/g" <<< $CMD)
-          DEF_ROUTE_TABLE_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g' | sed 's/,//g'"))
-          echo "DEF_ROUTE_TABLE_ID=${DEF_ROUTE_TABLE_ID}" >> $GITHUB_ENV
-
-          echo "Update Default Route table with Internet Gateway"
-          CMD="oci network route-table update --rt-id $DEF_ROUTE_TABLE_ID \
-            --route-rules '[{\"cidrBlock\":\"0.0.0.0/0\",\"networkEntityId\":\"IGW_ID\"}]' --force"
-          CMD=$(sed -e "s/\IGW_ID/${IGW_ID}/g" <<< $CMD)
-          eval $(echo $CMD)
-          
-          echo "Create Security Ingress / Egress Rules for API Endpoint, Nodes and LB"
-          oci network security-list create --compartment-id $COMPARTMENT_ID --vcn-id $VCN_ID \
-            --display-name api-endpoint-sec-list --ingress-security-rules file:///home/runner/seclist/api-endpoint-sec-list_ingress.json \
-            --egress-security-rules file:///home/runner/seclist/api-endpoint-sec-list_egress.json
-          API_ENDPOINT_SEC_LIST_ID=$(oci network security-list list --compartment-id $COMPARTMENT_ID \
-            --vcn-id $VCN_ID --query 'data[?"display-name"==`api-endpoint-sec-list`].id' | grep ocid | \
-            sed 's/"//g' | sed 's/ //g' | sed 's/,//g')
-          echo "API_ENDPOINT_SEC_LIST_ID=${API_ENDPOINT_SEC_LIST_ID}" >> $GITHUB_ENV
-
-
