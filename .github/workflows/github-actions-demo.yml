@@ -37,8 +37,12 @@ jobs:
           echo $COMPARTMENT_ID
           
           echo "Create VCN"
+          CMD="oci network vcn create --compartment-id ${{secrets.COMPARTMENT_NAME}} --cidr-block 10.0.0.0/16 \
+            --display-name ${{secrets.VCN_NAME}} --dns-label ${{secrets.DNS_LABEL}} --query data.id --raw-output)"
+          echo "VCN CMD: ${CMD}"
           VCN_ID=$(oci network vcn create --compartment-id ${{secrets.COMPARTMENT_NAME}} --cidr-block 10.0.0.0/16 \
             --display-name ${{secrets.VCN_NAME}} --dns-label ${{secrets.DNS_LABEL}} --query data.id --raw-output)
+          
           echo "VCN_ID=${VCN_ID}" >> $GITHUB_ENV
 
           echo "Create Internet Gateway"
