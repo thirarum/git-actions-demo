@@ -34,10 +34,11 @@ jobs:
           CMD=$(sed -e "s/\COMPARTMENT_NAME/${{secrets.COMPARTMENT_NAME}}/g" <<< $CMD)
           COMPARTMENT_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
           echo "COMPARTMENT_ID=${COMPARTMENT_ID}" >> $GITHUB_ENV
-          echo $COMPARTMENT_ID
           
           echo "Create VCN"
-          oci os ns get
+          VCN_ID=$(oci network vcn create --compartment-id ${{secrets.COMPARTMENT_NAME}} --cidr-block 10.0.0.0/16 --display-name ${{secrets.VCN_NAME}} --dns-label ${{secrets.DNS_LABEL}} --query data.id --raw-output)
+          echo "VCN_ID=${VCN_ID}" >> $GITHUB_ENV
+          echo ${VCN_ID}
 
           echo "Create Internet Gateway"
           IGW_ID=$(oci network internet-gateway create --compartment-id $COMPARTMENT_ID --vcn-id $VCN_ID \
