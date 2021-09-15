@@ -37,16 +37,11 @@ jobs:
           echo $COMPARTMENT_ID
           
           echo "Create VCN"
-          VCN_ID=$( \
-            oci network vcn create \
-              --compartment-id ${{secrets.COMPARTMENT_NAME}} \
-              --cidr-block 10.0.0.0/16 \
-              --display-name ${{secrets.VCN_NAME}} \
-              --dns-label ${{secrets.DNS_LABEL}} \
-              --query data.id \
-              --raw-output
-            )
-          
+          oci iam compartment list \
+              --compartment-id-in-subtree TRUE \
+              --all \
+              --query 'data[?\"name\"==\`COMPARTMENT_NAME\`].id'
+              
           echo "VCN_ID=${VCN_ID}" >> $GITHUB_ENV
           echo ${VCN_ID}
 
