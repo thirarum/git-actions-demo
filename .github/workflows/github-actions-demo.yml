@@ -36,7 +36,7 @@ jobs:
           echo "COMPARTMENT_ID=${COMPARTMENT_ID}" >> $GITHUB_ENV
           
           echo "Create VCN"
-          VCN_ID=$(oci network vcn create --compartment-id ${{secrets.COMPARTMENT_NAME}} --cidr-block 10.0.0.0/16 --display-name ${{secrets.VCN_NAME}} --dns-label ${{secrets.DNS_LABEL}} --query data.id --raw-output)
+          VCN_ID=$(oci network vcn create --compartment-id ${COMPARTMENT_ID} --cidr-block 10.0.0.0/16 --display-name ${{secrets.VCN_NAME}} --dns-label ${{secrets.DNS_LABEL}} --query data.id --raw-output)
           echo "VCN_ID=${VCN_ID}" >> $GITHUB_ENV
           echo ${VCN_ID}
 
