@@ -14,10 +14,6 @@ jobs:
           echo "tenancy=${{secrets.OCI_TENANCY_OCID}}" >> ~/.oci/config
           echo "key_file=~/.oci/key.pem" >> ~/.oci/config
           echo "${{secrets.OCI_KEY_FILE}}" >> ~/.oci/key.pem
-          echo "========================================="
-          cd ~ && pwd
-          whoami
-          echo "========================================="
       - name: Install OCI CLI
         run: |
           curl -L -O https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh
@@ -29,6 +25,11 @@ jobs:
         run: |
           oci setup repair-file-permissions --file ~/.oci/config
           oci setup repair-file-permissions --file ~/.oci/key.pem
-      - name: Run OCI CLI
+      - name: Setup OKE Cluster
         run: |
-          oci os ns get
+          echo "Setting up Virtual Cloud Network (VCN)"
+          echo "Getting Compartment ID"
+          CMD="oci iam compartment list --compartment-id-in-subtree TRUE --all --query 'data[?\"name\"==\`COMPARTMENT_NAME\`].id'"
+          CMD=$(sed -e "s/\COMPARTMENT_NAME/$COMPARTMENT_NAME/g" <<< $CMD)
+          COMPARTMENT_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
+          echo $COMPARTMENT_ID
