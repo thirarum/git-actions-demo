@@ -37,13 +37,7 @@ jobs:
           echo $COMPARTMENT_ID
           
           echo "Create VCN"
-          oci iam compartment list \
-              --compartment-id-in-subtree TRUE \
-              --all \
-              --query 'data[?\"name\"==\`COMPARTMENT_NAME\`].id'
-              
-          echo "VCN_ID=${VCN_ID}" >> $GITHUB_ENV
-          echo ${VCN_ID}
+          oci os ns get
 
           echo "Create Internet Gateway"
           IGW_ID=$(oci network internet-gateway create --compartment-id $COMPARTMENT_ID --vcn-id $VCN_ID \
