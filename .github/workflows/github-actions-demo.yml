@@ -14,13 +14,10 @@ jobs:
       - name: List files in the repository
         run: |
           ls ${{ github.workspace }}
-      - run: wget https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh
-      - run: sh install.sh --accept-all-defaults
-      - run: echo "This job's status is ${{ job.status }}."
-      - name: Set AKS Cluster Context
-        uses: azure/k8s-set-context@v1
-        with:
-          method: kubeconfig
-          kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      - name: Run kubectl
-        run: kubectl get nodes
+      - name: Install OCI CLI
+        run: |
+          curl -L -O https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh
+          chmod +x install.sh
+          ./install.sh --accept-all-defaults
+          echo "::add-path::/home/runner/bin"
+          exec -l $SHELL
