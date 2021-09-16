@@ -351,11 +351,11 @@ jobs:
           export KUBECONFIG=$KUBECONFIG_FILE
 
           kubectl version 
-          result=$?
-          if [ "$result" != "0" ];
-          then
-              echo "OKE Cluster not configured properly!!!"
-              exit 1
-          fi
 
           kubectl get nodes -o wide
+          
+          sleep 10
+          
+          kubectl get nodes -o wide
+          
+          echo "Completed..."
