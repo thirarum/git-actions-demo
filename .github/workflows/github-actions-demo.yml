@@ -14,6 +14,13 @@ jobs:
           echo "tenancy=${{secrets.OCI_TENANCY_OCID}}" >> ~/.oci/config
           echo "key_file=~/.oci/key.pem" >> ~/.oci/config
           echo "${{secrets.OCI_KEY_FILE}}" >> ~/.oci/key.pem
+      - name: Write VCN Security List Files
+        run: |
+          mkdir ~/seclist
+          echo "${{secrets.API_ENDPOINT_SEC_LIST_INGRESS_DATA}}" >> ~/seclist/api_endpoint_sec_list_ingress.json
+          echo "${{secrets.API_ENDPOINT_SEC_LIST_EGRESS_DATA}}" >> ~/seclist/api_endpoint_sec_list_egress.json
+          echo "${{secrets.NODE_SEC_LIST_INGRESS_DATA}}" >> ~/seclist/node_sec_list_ingress.json
+          echo "${{secrets.NODE_SEC_LIST_EGRESS_DATA}}" >> ~/seclist/node_sec_list_egress.json
       - name: Install OCI CLI
         run: |
           curl -L -O https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh
@@ -30,13 +37,255 @@ jobs:
           echo "Setting up Virtual Cloud Network (VCN)"
           
           echo "Getting Compartment ID"
-          CMD="oci iam compartment list --compartment-id-in-subtree TRUE --all --query 'data[?\"name\"==\`COMPARTMENT_NAME\`].id'"
+          CMD="oci iam compartment list \
+            --compartment-id-in-subtree TRUE \
+            --all \
+            --query 'data[?\"name\"==\`COMPARTMENT_NAME\`].id'"            
           CMD=$(sed -e "s/\COMPARTMENT_NAME/${{secrets.COMPARTMENT_NAME}}/g" <<< $CMD)
           COMPARTMENT_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
           echo "COMPARTMENT_ID=${COMPARTMENT_ID}" >> $GITHUB_ENV
           
           echo "Create VCN"
-          VCN_ID=$(oci network vcn create --compartment-id ${COMPARTMENT_ID} --cidr-block 10.0.0.0/16 --display-name ${{secrets.VCN_NAME}} --dns-label ${{secrets.DNS_LABEL}} --query data.id --raw-output)
+          VCN_ID=$( \
+            oci network vcn create \
+            --compartment-id ${COMPARTMENT_ID} \
+            --cidr-block 10.0.0.0/16 \
+            --display-name ${{secrets.VCN_NAME}} \
+            --dns-label ${{secrets.DNS_LABEL}} \
+            --query data.id \
+            --raw-output \
+          )
           echo "VCN_ID=${VCN_ID}" >> $GITHUB_ENV
-          echo ${VCN_ID}
+          
+          echo "Create Internet Gateway"
+          IGW_ID=$( \
+            oci network internet-gateway create \
+            --compartment-id $COMPARTMENT_ID \
+            --vcn-id $VCN_ID \
+            --is-enabled true \
+            --display-name internet-gateway-oke \
+            --query data.id \
+            --raw-output \
+          )
+          echo "IGW_ID=${IGW_ID}" >> $GITHUB_ENV
 
+          echo "Retrieve default Route table of the VCN"
+          DRT="Default Route Table for "
+          CMD="oci network route-table list \
+            --compartment-id $COMPARTMENT_ID \
+            --vcn-id $VCN_ID \
+            --query 'data[?\"display-name\"==\`DEFAULT_ROUTE_TABLE_NAME\`].id'"
+          CMD=$(sed -e "s/\DEFAULT_ROUTE_TABLE_NAME/${DRT}${{secrets.VCN_NAME}}/g" <<< $CMD)
+          DEF_ROUTE_TABLE_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g' | sed 's/,//g'"))
+          echo "DEF_ROUTE_TABLE_ID=${DEF_ROUTE_TABLE_ID}" >> $GITHUB_ENV
+
+          echo "Update Default Route table with Internet Gateway"
+          CMD="oci network route-table update \
+            --rt-id ${DEF_ROUTE_TABLE_ID} \
+            --route-rules '[{\"cidrBlock\":\"0.0.0.0/0\",\"networkEntityId\":\"IGW_ID\"}]' \
+            --force"
+          CMD=$(sed -e "s/\IGW_ID/${IGW_ID}/g" <<< $CMD)
+          eval $(echo $CMD)
+
+          echo "Create Security Ingress / Egress Rules for API Endpoint, Nodes and LB"
+          oci network security-list create \
+            --compartment-id $COMPARTMENT_ID \
+            --vcn-id $VCN_ID \
+            --display-name api-endpoint-sec-list \
+            --ingress-security-rules file:///home/runner/seclist/api_endpoint_sec_list_ingress.json \
+            --egress-security-rules file:///home/runner/seclist/api_endpoint_sec_list_egress.json
+
+          API_ENDPOINT_SEC_LIST_ID=$( \
+            oci network security-list list \
+            --compartment-id $COMPARTMENT_ID \
+            --vcn-id $VCN_ID \
+            --query 'data[?"display-name"==`api-endpoint-sec-list`].id' | \
+              grep ocid | \
+              sed 's/"//g' | \
+              sed 's/ //g' | \
+              sed 's/,//g' \
+          )
+          echo "API_ENDPOINT_SEC_LIST_ID=${API_ENDPOINT_SEC_LIST_ID}" >> $GITHUB_ENV
+          
+          oci network security-list create \
+            --compartment-id $COMPARTMENT_ID \
+            --vcn-id $VCN_ID \
+            --display-name node-sec-list \
+            --ingress-security-rules file:///home/runner/seclist/node_sec_list_ingress.json \
+            --egress-security-rules file:///home/runner/seclist/node_sec_list_egress.json
+            
+          NODE_SEC_LIST_ID=$( \
+            oci network security-list list \
+            --compartment-id $COMPARTMENT_ID \
+            --vcn-id $VCN_ID \
+            --query 'data[?"display-name"==`node-sec-list`].id' | \
+              grep ocid | \
+              sed 's/"//g' | \
+              sed 's/ //g' | \
+              sed 's/,//g' \
+          )
+          echo "NODE_SEC_LIST_ID=${NODE_SEC_LIST_ID}" >> $GITHUB_ENV
+
+          oci network security-list create 
+            --compartment-id $COMPARTMENT_ID \
+            --vcn-id $VCN_ID \
+            --display-name svc-lb-sec-list \
+            --ingress-security-rules '[]' \
+            --egress-security-rules '[]'
+            
+          LB_SEC_LIST_ID=$( \
+            oci network security-list list \
+            --compartment-id $COMPARTMENT_ID \
+            --vcn-id $VCN_ID \
+            --query 'data[?"display-name"==`svc-lb-sec-list`].id' | \
+              grep ocid | \
+              sed 's/"//g' | \
+              sed 's/ //g' | \
+              sed 's/,//g'
+          )
+          echo "LB_SEC_LIST_ID=${LB_SEC_LIST_ID}" >> $GITHUB_ENV
+          
+          echo "Create Subnet for API Endpoints"
+          CMD="oci network subnet create 
+            --compartment-id $COMPARTMENT_ID \
+            --vcn-id $VCN_ID  \
+            --display-name public-api-endpoint-subnet \
+            --cidr-block 10.0.0.0/28 \
+            --route-table-id $DEF_ROUTE_TABLE_ID \
+            --security-list-ids '[\"API_ENDPOINT_SEC_LIST_ID\"]' \
+            --query data.id \
+            --raw-output"
+          CMD=$(sed -e "s/\API_ENDPOINT_SEC_LIST_ID/${API_ENDPOINT_SEC_LIST_ID}/g" <<< $CMD)
+          PUBLIC_SUBNET_ID=$(eval $(echo "$CMD"))
+          echo "PUBLIC_SUBNET_ID=${PUBLIC_SUBNET_ID}" >> $GITHUB_ENV
+
+          echo "Create Subnet for Nodes"
+          CMD="oci network subnet create 
+            --compartment-id $COMPARTMENT_ID \
+            --vcn-id $VCN_ID \
+            --display-name node-subnet \
+            --cidr-block 10.0.10.0/24 \
+            --route-table-id $DEF_ROUTE_TABLE_ID \
+            --security-list-ids '[\"NODE_SEC_LIST_ID\"]' \
+            --query data.id \
+            --raw-output"
+          CMD=$(sed -e "s/\NODE_SEC_LIST_ID/${NODE_SEC_LIST_ID}/g" <<< $CMD)
+          NODE_SUBNET_ID=$(eval $(echo "$CMD"))
+          echo "NODE_SUBNET_ID=${NODE_SUBNET_ID}" >> $GITHUB_ENV
+          
+          echo "Create Subnet for LoadBalancer"
+          CMD="oci network subnet create \
+            --compartment-id $COMPARTMENT_ID \
+            --vcn-id $VCN_ID  \
+            --display-name svc-lb-subnet \
+            --cidr-block 10.0.20.0/24 \
+            --route-table-id $DEF_ROUTE_TABLE_ID \
+            --security-list-ids '[\"LB_SEC_LIST_ID\"]' \
+            --query data.id \
+            --raw-output"
+          CMD=$(sed -e "s/\LB_SEC_LIST_ID/${LB_SEC_LIST_ID}/g" <<< $CMD)
+          SVC_LB_SUBNET_ID=$(eval $(echo "$CMD"))
+          echo "SVC_LB_SUBNET_ID=${SVC_LB_SUBNET_ID}" >> $GITHUB_ENV
+          
+          echo "Create DHCP option with Internet and VCN resolver"
+          oci network dhcp-options create \
+            --compartment-id $COMPARTMENT_ID \
+            --vcn-id $VCN_ID \
+            --options  '[{"type": "DomainNameServer", "customDnsServers": [], "serverType": "VcnLocalPlusInternet"}]'          
+            
+      - name: Setting up OKE Cluster
+        run: |          
+          echo "Create OKE Cluster"
+          CMD="oci ce cluster create \
+            --compartment-id $COMPARTMENT_ID \
+            --kubernetes-version ${{secrets.K8S_VERSION}} \
+            --name ${{secrets.CLUSTER_NAME}} \
+            --vcn-id $VCN_ID \
+            --endpoint-public-ip-enabled true \
+            --endpoint-subnet-id $PUBLIC_SUBNET_ID \
+            --pods-cidr 10.244.0.0/16 \
+            --services-cidr 10.96.0.0/16 \
+            --service-lb-subnet-ids '[\"SVC_LB_SUBNET_ID\"]' \
+            --query data.id \
+            --raw-output"
+          CMD=$(sed -e "s/\SVC_LB_SUBNET_ID/${SVC_LB_SUBNET_ID}/g" <<< $CMD)
+          CLUSTER_ID=$(eval $(echo "$CMD"))
+          
+          sleep 10
+          
+          echo "Retrieve OKE cluster ID"
+          CMD="oci ce cluster list \
+            --compartment-id $COMPARTMENT_ID \
+            --query 'data[?\"name\"==\`CLUSTER_NAME\` && \"lifecycle-state\"!=\`DELETED\`].id'"
+          CMD=$(sed -e "s/\CLUSTER_NAME/${{secrets.CLUSTER_NAME}}/g" <<< $CMD)
+          CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))          
+          echo "CLUSTER_ID=${CLUSTER_ID}" >> $GITHUB_ENV
+
+          echo "Retrieve Image ID for ${{secrets.NODE_IMAGE}}"
+          CMD="oci compute image list \
+            --compartment-id $COMPARTMENT_ID 
+            --all \
+            --query 'data[?\"display-name\"==\`NODE_IMAGE\`].id'"
+          CMD=$(sed -e "s/\NODE_IMAGE/${{secrets.NODE_IMAGE}}/g" <<< $CMD)
+          NODE_IMAGE_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
+          echo "NODE_IMAGE_ID=${NODE_IMAGE_ID}" >> $GITHUB_ENV
+          
+          echo "Retrieve Availability Domain Name"
+          AD1=$( \
+            oci iam availability-domain list \
+              --compartment-id $COMPARTMENT_ID \\
+              --query 'data[*].name' | \
+              grep -i $(echo ${{secrets.OCI_REGION}} | cut -d '-' -f 2) | \
+              sed 's/"//g' | \
+              sed 's/ //g' | \
+              sed 's/,//g' | \
+              sed -n 1p
+          )
+          echo "AD1=${AD1}" >> $GITHUB_ENV
+          
+          echo "Create Node Pool"
+          NODE_POOL_NAME="wlsqa-nodepool"
+          CMD="oci ce node-pool create \
+            --cluster-id $CLUSTER_ID \
+            --compartment-id $COMPARTMENT_ID \
+            --kubernetes-version ${{secrets.K8S_VERSION}} \
+            --name $NODE_POOL_NAME \
+            --size ${{secrets.NODE_POOL_SIZE}} \
+            --node-shape ${{secrets.NODE_SHAPE}} \
+            --placement-configs '[{\"availabilityDomain\": \"AD1\", \"subnetId\": \"NODE_SUBNET_ID\"}]' \
+            --node-image-id $NODE_IMAGE_ID"
+          CMD=$(sed -e "s/\AD1/${AD1}/g" <<< $CMD)
+          CMD=$(sed -e "s/\NODE_SUBNET_ID/${NODE_SUBNET_ID}/g" <<< $CMD)
+          eval $(echo "$CMD")       
+
+      - name: Wait for OKE Cluster to be UP
+        run: |          
+          echo "Wait for around 15 minutes for the background setup to be completed..."
+
+          echo "Check if the OKE cluster is ACTIVE"
+          CMD="oci ce cluster list \
+            --compartment-id $COMPARTMENT_ID \
+            --query 'data[?\"name\"==\`CLUSTER_NAME\` && \"lifecycle-state\"==\`ACTIVE\`].id'"
+          CMD=$(sed -e "s/\CLUSTER_NAME/${{secrets.CLUSTER_NAME}}/g" <<< $CMD)
+          echo "CMD=${CMD}" >> $GITHUB_ENV
+          
+          CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
+          echo "CLUSTER_ID=${CLUSTER_ID}" >> $GITHUB_ENV
+
+          wait_time=$(date -ud "15 minute" +%s)
+          while [[ -z "${CLUSTER_ID}" ]];
+          do
+              if [ $(date -u +%s) -gt $wait_time ];
+              then
+                  echo "OKE Cluster not created even after 15 mins !!"
+                  exit 1
+              fi
+              echo "Waiting for OKE Cluster to become ACTIVE.."
+              sleep 10s
+              CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
+              if [ ! -z "$CLUSTER_ID" ];
+              then
+                  echo "OKE Cluster is ACTIVE now!!!"
+                  exit 0
+              fi
+          done
