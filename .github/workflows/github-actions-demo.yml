@@ -87,6 +87,12 @@ jobs:
           CMD=$(sed -e "s/\IGW_ID/${IGW_ID}/g" <<< $CMD)
           eval $(echo $CMD)
 
+          echo "+++++++++++++/home/runner/seclist/api_endpoint_sec_list_ingress.json+++++++++++++"
+          cat /home/runner/seclist/api_endpoint_sec_list_ingress.json
+          
+          echo "++++++++++++++/home/runner/seclist/api_endpoint_sec_list_egress.json+++++++++++++"
+          cat /home/runner/seclist/api_endpoint_sec_list_egress.json
+
           echo "Create Security Ingress / Egress Rules for API Endpoint, Nodes and LB"
           oci network security-list create \
             --compartment-id $COMPARTMENT_ID \
@@ -106,7 +112,7 @@ jobs:
               sed 's/,//g' \
           )
           echo "API_ENDPOINT_SEC_LIST_ID=${API_ENDPOINT_SEC_LIST_ID}" >> $GITHUB_ENV
-          
+
           oci network security-list create \
             --compartment-id $COMPARTMENT_ID \
             --vcn-id $VCN_ID \
