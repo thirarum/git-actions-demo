@@ -89,6 +89,7 @@ jobs:
 
           echo "Create Security Ingress / Egress Rules for API Endpoint, Nodes and LB"
           oci network security-list create --compartment-id $COMPARTMENT_ID --vcn-id $VCN_ID --display-name api-endpoint-sec-list --ingress-security-rules file:///home/runner/seclist/api_endpoint_sec_list_ingress.json --egress-security-rules file:///home/runner/seclist/api_endpoint_sec_list_egress.json
+          echo "Successfully created basic list+++++++++>"
 
           API_ENDPOINT_SEC_LIST_ID=$( \
             oci network security-list list \
@@ -101,6 +102,7 @@ jobs:
             sed 's/,//g' \
           )
           echo "API_ENDPOINT_SEC_LIST_ID=${API_ENDPOINT_SEC_LIST_ID}" >> $GITHUB_ENV
+          echo "Successfully created API_ENDPOINT_SEC_LIST"
 
           oci network security-list create \
           --compartment-id $COMPARTMENT_ID \
@@ -108,6 +110,7 @@ jobs:
           --display-name node-sec-list \
           --ingress-security-rules file:///home/runner/seclist/node_sec_list_ingress.json \
           --egress-security-rules file:///home/runner/seclist/node_sec_list_egress.json
+          echo "Successfully created Node Sec List ============>>"
             
           NODE_SEC_LIST_ID=$( \
             oci network security-list list \
@@ -120,6 +123,7 @@ jobs:
             sed 's/,//g' \
           )
           echo "NODE_SEC_LIST_ID=${NODE_SEC_LIST_ID}" >> $GITHUB_ENV
+          echo "Successfully created NODE_SEC_LIST"
 
           oci network security-list create 
           --compartment-id $COMPARTMENT_ID \
@@ -127,6 +131,7 @@ jobs:
           --display-name svc-lb-sec-list \
           --ingress-security-rules '[]' \
           --egress-security-rules '[]'
+          echo "Successfully created empty sec list"
             
           LB_SEC_LIST_ID=$( \
             oci network security-list list \
@@ -139,6 +144,7 @@ jobs:
             sed 's/,//g'
           )
           echo "LB_SEC_LIST_ID=${LB_SEC_LIST_ID}" >> $GITHUB_ENV
+          echo "Successfully created LB_SEC_LIST"
           
           echo "Create Subnet for API Endpoints"
           CMD="oci network subnet create 
