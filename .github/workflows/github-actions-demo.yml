@@ -256,6 +256,7 @@ jobs:
             --node-image-id $NODE_IMAGE_ID"
           CMD=$(sed -e "s/\AD1/${AD1}/g" <<< $CMD)
           CMD=$(sed -e "s/\NODE_SUBNET_ID/${NODE_SUBNET_ID}/g" <<< $CMD)
+          echo "oci ce node-pool create command: $CMD"
           eval $(echo "$CMD")       
 
       - name: Wait for OKE Cluster to be UP
