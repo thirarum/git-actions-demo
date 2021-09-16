@@ -316,13 +316,14 @@ jobs:
 
           mkdir ~/k8s_dir
           KUBECONFIG_FILE=/home/runner/k8s_dir/${{secrets.CLUSTER_NAME}}.conf
+          echo "KUBECONFIG_FILE=${KUBECONFIG_FILE}" >> $GITHUB_ENV
           
           rm -rf $KUBECONFIG_FILE
 
           oci ce cluster create-kubeconfig \
             --cluster-id $CLUSTER_ID \
             --file $KUBECONFIG_FILE \
-            --region $REGION \
+            --region ${{secrets.OCI_REGION}} \
             --token-version 2.0.0 \
             --kube-endpoint PUBLIC_ENDPOINT
 
