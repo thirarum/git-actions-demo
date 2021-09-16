@@ -87,67 +87,61 @@ jobs:
           CMD=$(sed -e "s/\IGW_ID/${IGW_ID}/g" <<< $CMD)
           eval $(echo $CMD)
 
-          echo "+++++++++++++/home/runner/seclist/api_endpoint_sec_list_ingress.json+++++++++++++"
-          cat /home/runner/seclist/api_endpoint_sec_list_ingress.json
-          
-          echo "++++++++++++++/home/runner/seclist/api_endpoint_sec_list_egress.json+++++++++++++"
-          cat /home/runner/seclist/api_endpoint_sec_list_egress.json
-
           echo "Create Security Ingress / Egress Rules for API Endpoint, Nodes and LB"
           oci network security-list create \
-            --compartment-id $COMPARTMENT_ID \
-            --vcn-id $VCN_ID \
-            --display-name api-endpoint-sec-list \
-            --ingress-security-rules file:///home/runner/seclist/api_endpoint_sec_list_ingress.json \
-            --egress-security-rules file:///home/runner/seclist/api_endpoint_sec_list_egress.json
+          --compartment-id $COMPARTMENT_ID \
+          --vcn-id $VCN_ID \
+          --display-name api-endpoint-sec-list \
+          --ingress-security-rules file:///home/runner/seclist/api_endpoint_sec_list_ingress.json \
+          --egress-security-rules file:///home/runner/seclist/api_endpoint_sec_list_egress.json
 
           API_ENDPOINT_SEC_LIST_ID=$( \
             oci network security-list list \
             --compartment-id $COMPARTMENT_ID \
             --vcn-id $VCN_ID \
             --query 'data[?"display-name"==`api-endpoint-sec-list`].id' | \
-              grep ocid | \
-              sed 's/"//g' | \
-              sed 's/ //g' | \
-              sed 's/,//g' \
+            grep ocid | \
+            sed 's/"//g' | \
+            sed 's/ //g' | \
+            sed 's/,//g' \
           )
           echo "API_ENDPOINT_SEC_LIST_ID=${API_ENDPOINT_SEC_LIST_ID}" >> $GITHUB_ENV
 
           oci network security-list create \
-            --compartment-id $COMPARTMENT_ID \
-            --vcn-id $VCN_ID \
-            --display-name node-sec-list \
-            --ingress-security-rules file:///home/runner/seclist/node_sec_list_ingress.json \
-            --egress-security-rules file:///home/runner/seclist/node_sec_list_egress.json
+          --compartment-id $COMPARTMENT_ID \
+          --vcn-id $VCN_ID \
+          --display-name node-sec-list \
+          --ingress-security-rules file:///home/runner/seclist/node_sec_list_ingress.json \
+          --egress-security-rules file:///home/runner/seclist/node_sec_list_egress.json
             
           NODE_SEC_LIST_ID=$( \
             oci network security-list list \
             --compartment-id $COMPARTMENT_ID \
             --vcn-id $VCN_ID \
             --query 'data[?"display-name"==`node-sec-list`].id' | \
-              grep ocid | \
-              sed 's/"//g' | \
-              sed 's/ //g' | \
-              sed 's/,//g' \
+            grep ocid | \
+            sed 's/"//g' | \
+            sed 's/ //g' | \
+            sed 's/,//g' \
           )
           echo "NODE_SEC_LIST_ID=${NODE_SEC_LIST_ID}" >> $GITHUB_ENV
 
           oci network security-list create 
-            --compartment-id $COMPARTMENT_ID \
-            --vcn-id $VCN_ID \
-            --display-name svc-lb-sec-list \
-            --ingress-security-rules '[]' \
-            --egress-security-rules '[]'
+          --compartment-id $COMPARTMENT_ID \
+          --vcn-id $VCN_ID \
+          --display-name svc-lb-sec-list \
+          --ingress-security-rules '[]' \
+          --egress-security-rules '[]'
             
           LB_SEC_LIST_ID=$( \
             oci network security-list list \
             --compartment-id $COMPARTMENT_ID \
             --vcn-id $VCN_ID \
             --query 'data[?"display-name"==`svc-lb-sec-list`].id' | \
-              grep ocid | \
-              sed 's/"//g' | \
-              sed 's/ //g' | \
-              sed 's/,//g'
+            grep ocid | \
+            sed 's/"//g' | \
+            sed 's/ //g' | \
+            sed 's/,//g'
           )
           echo "LB_SEC_LIST_ID=${LB_SEC_LIST_ID}" >> $GITHUB_ENV
           
@@ -195,9 +189,9 @@ jobs:
           
           echo "Create DHCP option with Internet and VCN resolver"
           oci network dhcp-options create \
-            --compartment-id $COMPARTMENT_ID \
-            --vcn-id $VCN_ID \
-            --options  '[{"type": "DomainNameServer", "customDnsServers": [], "serverType": "VcnLocalPlusInternet"}]'          
+          --compartment-id $COMPARTMENT_ID \
+          --vcn-id $VCN_ID \
+          --options  '[{"type": "DomainNameServer", "customDnsServers": [], "serverType": "VcnLocalPlusInternet"}]'          
             
       - name: Setting up OKE Cluster
         run: |          
@@ -239,13 +233,13 @@ jobs:
           echo "Retrieve Availability Domain Name"
           AD1=$( \
             oci iam availability-domain list \
-              --compartment-id $COMPARTMENT_ID \\
-              --query 'data[*].name' | \
-              grep -i $(echo ${{secrets.OCI_REGION}} | cut -d '-' -f 2) | \
-              sed 's/"//g' | \
-              sed 's/ //g' | \
-              sed 's/,//g' | \
-              sed -n 1p
+            --compartment-id $COMPARTMENT_ID \\
+            --query 'data[*].name' | \
+            grep -i $(echo ${{secrets.OCI_REGION}} | cut -d '-' -f 2) | \
+            sed 's/"//g' | \
+            sed 's/ //g' | \
+            sed 's/,//g' | \
+            sed -n 1p
           )
           echo "AD1=${AD1}" >> $GITHUB_ENV
           
