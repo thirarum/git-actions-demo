@@ -88,12 +88,7 @@ jobs:
           eval $(echo $CMD)
 
           echo "Create Security Ingress / Egress Rules for API Endpoint, Nodes and LB"
-          oci network security-list create \
-          --compartment-id $COMPARTMENT_ID \
-          --vcn-id $VCN_ID \
-          --display-name api-endpoint-sec-list \
-          --ingress-security-rules file:///home/runner/seclist/api_endpoint_sec_list_ingress.json \
-          --egress-security-rules file:///home/runner/seclist/api_endpoint_sec_list_egress.json
+          oci network security-list create --compartment-id $COMPARTMENT_ID --vcn-id $VCN_ID --display-name api-endpoint-sec-list --ingress-security-rules file:///home/runner/seclist/api_endpoint_sec_list_ingress.json --egress-security-rules file:///home/runner/seclist/api_endpoint_sec_list_egress.json
 
           API_ENDPOINT_SEC_LIST_ID=$( \
             oci network security-list list \
