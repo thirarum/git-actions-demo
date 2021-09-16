@@ -1,7 +1,7 @@
 name: GitHub Actions Demo
 on: [push]
 jobs:
-  Explore-GitHub-Actions:
+  create_oke_cluster:
     runs-on: ubuntu-latest
     steps:
       - name: Write Config & Key Files
@@ -290,3 +290,50 @@ jobs:
                   exit 0
               fi
           done
+          
+  install_v8o:
+    needs: create_oke_cluster
+    runs-on: ubuntu-latest
+    steps:
+      - name: Config KUBECONFIG
+        run: |
+          echo "Getting Compartment ID"
+          CMD="oci iam compartment list \
+            --compartment-id-in-subtree TRUE \
+            --all \
+            --query 'data[?\"name\"==\`COMPARTMENT_NAME\`].id'"
+          CMD=$(sed -e "s/\COMPARTMENT_NAME/${{secrets.COMPARTMENT_NAME}}/g" <<< $CMD)
+          COMPARTMENT_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
+          echo "COMPARTMENT_ID=${COMPARTMENT_ID}" >> $GITHUB_ENV
+          
+          echo "Retrieve OKE cluster ID"
+          CMD="oci ce cluster list \
+            --compartment-id $COMPARTMENT_ID \
+            --query 'data[?\"name\"==\`CLUSTER_NAME\` && \"lifecycle-state\"!=\`DELETED\`].id'"
+          CMD=$(sed -e "s/\CLUSTER_NAME/${{secrets.CLUSTER_NAME}}/g" <<< $CMD)
+          CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
+          echo "CLUSTER_ID=${CLUSTER_ID}" >> $GITHUB_ENV
+
+          mkdir ~/k8s_dir
+          KUBECONFIG_FILE=/home/runner/k8s_dir/${{secrets.CLUSTER_NAME}}.conf
+          
+          rm -rf $KUBECONFIG_FILE
+
+          oci ce cluster create-kubeconfig \
+            --cluster-id $CLUSTER_ID \
+            --file $KUBECONFIG_FILE \
+            --region $REGION \
+            --token-version 2.0.0 \
+            --kube-endpoint PUBLIC_ENDPOINT
+
+          export KUBECONFIG=$KUBECONFIG_FILE
+
+          kubectl version 
+          result=$?
+          if [ "$result" != "0" ];
+          then
+              echo "OKE Cluster not configured properly!!!"
+              exit 1
+          fi
+
+          kubectl get nodes -o wide
