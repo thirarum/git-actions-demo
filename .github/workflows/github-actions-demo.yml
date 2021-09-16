@@ -233,7 +233,7 @@ jobs:
           echo "Retrieve Availability Domain Name"
           AD1=$( \
             oci iam availability-domain list \
-              --compartment-id $COMPARTMENT_ID \\
+              --compartment-id $COMPARTMENT_ID \
               --query 'data[*].name' | \
               grep -i $(echo ${{secrets.OCI_REGION}} | cut -d '-' -f 2) | \
                 sed 's/"//g' | \
