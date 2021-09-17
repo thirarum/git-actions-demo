@@ -323,11 +323,57 @@ jobs:
               echo "Waiting for all nodes to become ACTIVE.."
               sleep 10s
               ACTIVE_NODES_COUNT=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/\,//g' | sed 's/ //g' | wc -l"))
-              if [[ "$ACTIVE_NODES_COUNT" != "${{secrets.NODE_POOL_SIZE}}" ]];
+              if [[ "$ACTIVE_NODES_COUNT" == "${{secrets.NODE_POOL_SIZE}}" ]];
               then
                   echo "All nodes are ACTIVE now!!!"
               fi
           done
+
+      - name: Checking Kubernetes Nodes Condition
+        run: |
+          # Sometimes, Node State may be ACTIVE, but Kubernetes Node Condition may not be ACTIVE
+          echo "Checking the condition of the Kubernetes node, as indicated by the Kubernetes API server"
+          
+          mkdir ~/k8s_dir
+          KUBECONFIG_FILE=/home/runner/k8s_dir/${{secrets.CLUSTER_NAME}}.conf
+          echo "KUBECONFIG_FILE=${KUBECONFIG_FILE}" >> $GITHUB_ENV
+          rm -rf $KUBECONFIG_FILE
+
+          oci ce cluster create-kubeconfig \
+            --cluster-id $CLUSTER_ID \
+            --file $KUBECONFIG_FILE \
+            --region ${{secrets.OCI_REGION}} \
+            --token-version 2.0.0 \
+            --kube-endpoint PUBLIC_ENDPOINT
+
+          echo "KUBECONFIG=${KUBECONFIG_FILE}" >> $GITHUB_ENV
+          
+          kubectl version 
+          kubectl get nodes -o wide
+          K8S_API_STATE=$?
+          echo "K8S_API_STATE=${K8S_API_STATE}" >> $GITHUB_ENV
+          
+          if [ "$K8S_API_STATE" != "0" ];
+          then
+              echo "Kubernetes Nodes Condition is not ACTIVE, let's wait..."
+              wait_time=$(date -ud "10 minute" +%s)
+              while [[ "$K8S_API_STATE" != "0" ]];
+              do
+                  if [ $(date -u +%s) -gt $wait_time ];
+                  then
+                      echo "K8s nodes condition has not become ACTIVE in 10 mins !!"
+                      exit 1
+                  fi
+                  echo "Waiting for K8s nodes condition to become ACTIVE.."
+                  sleep 10s
+                  kubectl get nodes -o wide
+                  K8S_API_STATE=$?
+                  if [[ "$K8S_API_STATE" == "0" ]];
+                  then
+                      echo "K8s nodes condition is ACTIVE now!!!"
+                  fi
+              done
+          fi          
 
   install_v8o:
     needs: create_oke_cluster
@@ -464,6 +510,7 @@ jobs:
           
       - name: Deploy Hello-Helidon on V8o
         run: |
+          export KUBECONFIG=$KUBECONFIG
           echo "Deploy hello-helidon sample application on Verrazzano"
 
           kubectl create namespace hello-helidon
