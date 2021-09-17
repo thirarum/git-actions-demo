@@ -323,6 +323,7 @@ jobs:
               echo "Waiting for all nodes to become ACTIVE.."
               sleep 10s
               ACTIVE_NODES_COUNT=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/\,//g' | sed 's/ //g' | wc -l"))
+              echo "ACTIVE_NODES_COUNT=${ACTIVE_NODES_COUNT}" >> $GITHUB_ENV
               if [[ "$ACTIVE_NODES_COUNT" == "${{secrets.NODE_POOL_SIZE}}" ]];
               then
                   echo "All nodes are ACTIVE now!!!"
@@ -334,7 +335,7 @@ jobs:
           # Sometimes, Node State may be ACTIVE, but Kubernetes Node Condition may not be ACTIVE
           echo "Checking the condition of the Kubernetes node, as indicated by the Kubernetes API server"
           
-          mkdir ~/k8s_dir
+          mkdir -p ~/k8s_dir
           KUBECONFIG_FILE=/home/runner/k8s_dir/${{secrets.CLUSTER_NAME}}.conf
           echo "KUBECONFIG_FILE=${KUBECONFIG_FILE}" >> $GITHUB_ENV
           rm -rf $KUBECONFIG_FILE
@@ -348,6 +349,7 @@ jobs:
 
           echo "KUBECONFIG=${KUBECONFIG_FILE}" >> $GITHUB_ENV
           
+          export KUBECONFIG=$KUBECONFIG          
           kubectl version 
           kubectl get nodes -o wide
           K8S_API_STATE=$?
@@ -433,6 +435,8 @@ jobs:
             --kube-endpoint PUBLIC_ENDPOINT
 
           echo "KUBECONFIG=${KUBECONFIG_FILE}" >> $GITHUB_ENV
+          
+          export KUBECONFIG=$KUBECONFIG
           kubectl version 
           kubectl get nodes -o wide
           
