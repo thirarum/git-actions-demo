@@ -287,10 +287,47 @@ jobs:
               if [ ! -z "$CLUSTER_ID" ];
               then
                   echo "OKE Cluster is ACTIVE now!!!"
-                  exit 0
               fi
           done
-          
+
+      - name: Wait for all nodes to become ACTIVE
+        run: |          
+          echo "Get NODE_POOL_ID"
+          NODE_POOL_ID=$( \
+            oci ce node-pool list \
+              --compartment-id $COMPARTMENT_ID \
+              --cluster-id $CLUSTER_ID \
+              --query data[*].id | grep ocid | sed 's/\"//g' | sed 's/ //g' \
+          )
+          echo "NODE_POOL_ID=${NODE_POOL_ID}" >> $GITHUB_ENV
+
+          echo "Check if all the nodes in cluster are ACTIVE"
+          CMD="oci ce node-pool get \
+            --node-pool-id $NODE_POOL_ID \
+            --query 'data.nodes[?\"node-pool-id\"==\`NODE_POOL_ID\` && \"lifecycle-state\"==\`ACTIVE\`].id'"
+          CMD=$(sed -e "s/\NODE_POOL_ID/${NODE_POOL_ID}/g" <<< $CMD)
+          ACTIVE_NODES_COUNT=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/\,//g' | sed 's/ //g' | wc -l"))
+          echo "ACTIVE_NODES_COUNT=${ACTIVE_NODES_COUNT}" >> $GITHUB_ENV
+
+          echo "ACTIVE nodes count: $ACTIVE_NODES_COUNT"
+
+          wait_time=$(date -ud "20 minute" +%s)
+          while [[ "$ACTIVE_NODES_COUNT" != "${{secrets.NODE_POOL_SIZE}}" ]];
+          do
+              if [ $(date -u +%s) -gt $wait_time ];
+              then
+                  echo "Not all nodes become ACTIVE in 20 mins !!"
+                  exit 1
+              fi
+              echo "Waiting for all nodes to become ACTIVE.."
+              sleep 10s
+              ACTIVE_NODES_COUNT=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/\,//g' | sed 's/ //g' | wc -l"))
+              if [[ "$ACTIVE_NODES_COUNT" != "${{secrets.NODE_POOL_SIZE}}" ]];
+              then
+                  echo "All nodes are ACTIVE now!!!"
+              fi
+          done
+
   install_v8o:
     needs: create_oke_cluster
     runs-on: ubuntu-latest
@@ -349,13 +386,107 @@ jobs:
             --kube-endpoint PUBLIC_ENDPOINT
 
           export KUBECONFIG=$KUBECONFIG_FILE
-
           kubectl version 
+          kubectl get nodes -o wide
+          
+      - name: Install V8o
+        run: |
+          echo "Install Verrazzano Platform Operator"
+          kubectl apply -f https://github.com/verrazzano/verrazzano/releases/latest/download/operator.yaml
 
-          kubectl get nodes -o wide
+          echo "Waiting for VZ operator installation to be completed..."
+          kubectl -n verrazzano-install rollout status deployment/verrazzano-platform-operator
+
+          echo "Install Verrazzano using 'dev' profile"
+          kubectl apply -f - <<EOF
+          apiVersion: install.verrazzano.io/v1alpha1
+          kind: Verrazzano
+          metadata:
+            name: verrazzano-admin
+          spec:
+            profile: ${{secrets.VZ_PROFILE}}
+            components:
+              dns:
+                wildcard:
+                  domain: nip.io
+          EOF
+
+          sleep 5
+
+          VZ_STATE=$(kubectl get verrazzano | grep verrazzano-admin | awk {'print $2'})
+          echo "Verrazzano CRD status: $VZ_STATUS"
+
+          wait_time=$(date -ud "20 minute" +%s)
+          while [[ "${VZ_STATE}" != "InstallComplete" ]];
+          do
+              if [ $(date -u +%s) -gt $wait_time ];
+              then
+                  echo "Verrazzano installation is not complete even after 20 mins !!"
+                  exit 1
+              fi
+              echo "Waiting for Verrazzano installation to be completed..."
+              sleep 20s
+              VZ_STATE=$(kubectl get verrazzano | grep verrazzano-admin | awk {'print $2'})
+          done
+
+          echo "Verrazzano installation is complete!!!"
+          kubectl get verrazzano
           
-          sleep 10
+          echo "Get console URLs"
+          kubectl get vz -o jsonpath="{.items[].status.instance}" | jq .
+
+          VZ_CONSOLE_URL=$( \
+            kubectl get ingress -n verrazzano-system 2>&1 | \
+              grep verrazzano-ingress | \
+              awk {'print $3'} \
+          )
+
+          VZ_CONSOLE_STATUS=$(curl -s -I https://${VZ_CONSOLE_URL} | awk {'print $2'})
+
+          if [ "${VZ_CONSOLE_STATUS}" != "200" ];
+          then
+              echo "Error getting Verrazzano console!!!"
+              exit 1
+          fi
+
+          echo "Verrazzano console is available at https://${VZ_CONSOLE_URL}"
+
+          CONSOLE_PWD=$( \
+            kubectl get secret \
+              --namespace verrazzano-system verrazzano -o jsonpath={.data.password} | base64 --decode; echo \
+          )
+
+          echo "============================================="
+          echo "Verrazzano console password: ${CONSOLE_PWD}"
+          echo "============================================="
           
-          kubectl get nodes -o wide
+      - name: Deploy Hello-Helidon on V8o
+        run: |
+          echo "Deploy hello-helidon sample application on Verrazzano"
+
+          kubectl create namespace hello-helidon
+          kubectl label namespace hello-helidon verrazzano-managed=true istio-injection=enabled
+          kubectl apply -f https://raw.githubusercontent.com/verrazzano/verrazzano/master/examples/hello-helidon/hello-helidon-comp.yaml
+          kubectl apply -f https://raw.githubusercontent.com/verrazzano/verrazzano/master/examples/hello-helidon/hello-helidon-app.yaml
+
+          sleep 5
+
+          kubectl wait --for=condition=Ready pods --all -n hello-helidon --timeout=300s
+          HOST=$( \
+            kubectl get gateway hello-helidon-hello-helidon-appconf-gw \
+              -n hello-helidon \
+              -o jsonpath='{.spec.servers[0].hosts[0]}' \
+          )
+
+          curl -sk -X GET "https://${HOST}/greet"
           
-          echo "Completed..."
+          curl -sk -X GET "https://${HOST}/greet" | grep "Hello World"
+          result=$?
+
+          if [ "${result}" != "0" ];
+          then
+              echo "Error deploying hello-helidon on Verrazzano!!!"
+              exit 1
+          fi
+
+          echo "hello-helidon sample deployed on Verrazzano successfully!"
