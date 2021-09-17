@@ -284,6 +284,7 @@ jobs:
               echo "Waiting for OKE Cluster to become ACTIVE.."
               sleep 10s
               CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
+              echo "CLUSTER_ID=${CLUSTER_ID}" >> $GITHUB_ENV
               if [ ! -z "$CLUSTER_ID" ];
               then
                   echo "OKE Cluster is ACTIVE now!!!"
