@@ -347,7 +347,9 @@ jobs:
             --kube-endpoint PUBLIC_ENDPOINT
 
           KUBECONFIG=$KUBECONFIG_FILE
-          echo "KUBECONFIG=${KUBECONFIG}" >> $GITHUB_ENV
+
+          cat $KUBECONFIG
+          echo $KUBECONFIG
           
           kubectl version 
           kubectl get nodes -o wide
