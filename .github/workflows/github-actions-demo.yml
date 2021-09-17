@@ -337,7 +337,6 @@ jobs:
           
           mkdir -p ~/k8s_dir
           KUBECONFIG_FILE=/home/runner/k8s_dir/${{secrets.CLUSTER_NAME}}.conf
-          echo "KUBECONFIG_FILE=${KUBECONFIG_FILE}" >> $GITHUB_ENV
           rm -rf $KUBECONFIG_FILE
 
           oci ce cluster create-kubeconfig \
@@ -347,9 +346,9 @@ jobs:
             --token-version 2.0.0 \
             --kube-endpoint PUBLIC_ENDPOINT
 
-          echo "KUBECONFIG=${KUBECONFIG_FILE}" >> $GITHUB_ENV
+          KUBECONFIG=$KUBECONFIG_FILE
+          echo "KUBECONFIG=${KUBECONFIG}" >> $GITHUB_ENV
           
-          export KUBECONFIG=$KUBECONFIG          
           kubectl version 
           kubectl get nodes -o wide
           K8S_API_STATE=$?
@@ -423,8 +422,6 @@ jobs:
 
           mkdir ~/k8s_dir
           KUBECONFIG_FILE=/home/runner/k8s_dir/${{secrets.CLUSTER_NAME}}.conf
-          echo "KUBECONFIG_FILE=${KUBECONFIG_FILE}" >> $GITHUB_ENV
-          
           rm -rf $KUBECONFIG_FILE
 
           oci ce cluster create-kubeconfig \
@@ -434,9 +431,9 @@ jobs:
             --token-version 2.0.0 \
             --kube-endpoint PUBLIC_ENDPOINT
 
-          echo "KUBECONFIG=${KUBECONFIG_FILE}" >> $GITHUB_ENV
-          
-          export KUBECONFIG=$KUBECONFIG
+          KUBECONFIG=$KUBECONFIG_FILE
+          echo "KUBECONFIG=${KUBECONFIG}" >> $GITHUB_ENV
+
           kubectl version 
           kubectl get nodes -o wide
           
