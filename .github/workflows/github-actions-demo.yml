@@ -469,14 +469,16 @@ jobs:
           echo "VZ_STATE=${VZ_STATE}" >> $GITHUB_ENV
           echo "Verrazzano CRD status: $VZ_STATUS"
 
-          wait_time=$(date -ud "20 minute" +%s)
+          wait_time=$(date -ud "30 minute" +%s)
           echo "wait_time=${wait_time}" >> $GITHUB_ENV
+          echo "wait_time: $wait_time"
+          echo "vz_state: $VZ_STATE"
           
           while [[ "${VZ_STATE}" != "InstallComplete" ]];
           do
               if [ $(date -u +%s) -gt $wait_time ];
               then
-                  echo "Verrazzano installation is not complete even after 20 mins !!"
+                  echo "Verrazzano installation is not complete even after 30 mins !!"
                   exit 1
               fi
               echo "Waiting for Verrazzano installation to be completed..."
@@ -495,10 +497,12 @@ jobs:
               grep verrazzano-ingress | \
               awk {'print $3'} \
           )
-          echo "VZ_CONSOLE_URL=${VZ_CONSOLE_URL}" >> $GITHUB_ENV
+          echo "$VZ_CONSOLE_URL=${VZ_CONSOLE_URL}" >> $GITHUB_ENV
+          echo "vz_console_url: $VZ_CONSOLE_URL"
 
           VZ_CONSOLE_STATUS=$(curl -s -I https://${VZ_CONSOLE_URL} | awk {'print $2'})
           echo "VZ_CONSOLE_STATUS=${VZ_CONSOLE_STATUS}" >> $GITHUB_ENV
+          echo "vz_console_status: $VZ_CONSOLE_STATUS"
 
           if [ "${VZ_CONSOLE_STATUS}" != "200" ];
           then
@@ -513,6 +517,7 @@ jobs:
               --namespace verrazzano-system verrazzano -o jsonpath={.data.password} | base64 --decode; echo \
           )
           echo "CONSOLE_PWD=${CONSOLE_PWD}" >> $GITHUB_ENV
+          echo "console_pwd: $CONSOLE_PWD"
 
           echo "============================================="
           echo "Verrazzano console password: ${CONSOLE_PWD}"
