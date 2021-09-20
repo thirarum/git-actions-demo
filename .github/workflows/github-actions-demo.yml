@@ -436,6 +436,7 @@ jobs:
           KUBECONFIG=$KUBECONFIG_FILE
           echo "KUBECONFIG=${KUBECONFIG}" >> $GITHUB_ENV
 
+          export KUBECONFIG=$KUBECONFIG
           kubectl version 
           kubectl get nodes -o wide
           
