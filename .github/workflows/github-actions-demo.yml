@@ -466,9 +466,12 @@ jobs:
           sleep 5
 
           VZ_STATE=$(kubectl get verrazzano | grep verrazzano-admin | awk {'print $2'})
+          echo "VZ_STATE=${VZ_STATE}" >> $GITHUB_ENV
           echo "Verrazzano CRD status: $VZ_STATUS"
 
           wait_time=$(date -ud "20 minute" +%s)
+          echo "wait_time=${wait_time}" >> $GITHUB_ENV
+          
           while [[ "${VZ_STATE}" != "InstallComplete" ]];
           do
               if [ $(date -u +%s) -gt $wait_time ];
@@ -492,9 +495,10 @@ jobs:
               grep verrazzano-ingress | \
               awk {'print $3'} \
           )
+          echo "VZ_CONSOLE_URL=${VZ_CONSOLE_URL}" >> $GITHUB_ENV
 
           VZ_CONSOLE_STATUS=$(curl -s -I https://${VZ_CONSOLE_URL} | awk {'print $2'})
-          sleep 5
+          echo "VZ_CONSOLE_STATUS=${VZ_CONSOLE_STATUS}" >> $GITHUB_ENV
 
           if [ "${VZ_CONSOLE_STATUS}" != "200" ];
           then
@@ -508,6 +512,7 @@ jobs:
             kubectl get secret \
               --namespace verrazzano-system verrazzano -o jsonpath={.data.password} | base64 --decode; echo \
           )
+          echo "CONSOLE_PWD=${CONSOLE_PWD}" >> $GITHUB_ENV
 
           echo "============================================="
           echo "Verrazzano console password: ${CONSOLE_PWD}"
@@ -531,11 +536,13 @@ jobs:
               -n hello-helidon \
               -o jsonpath='{.spec.servers[0].hosts[0]}' \
           )
+          echo "HOST=${HOST}" >> $GITHUB_ENV
 
           curl -sk -X GET "https://${HOST}/greet"
           
           curl -sk -X GET "https://${HOST}/greet" | grep "Hello World"
           result=$?
+          echo $result
 
           if [ "${result}" != "0" ];
           then
