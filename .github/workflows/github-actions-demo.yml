@@ -501,19 +501,6 @@ jobs:
           )
           echo "$VZ_CONSOLE_URL=${VZ_CONSOLE_URL}" >> $GITHUB_ENV
 
-          curl -s -I https://$VZ_CONSOLE_URL
-          VZ_CONSOLE_STATUS=$(curl -s -I https://$VZ_CONSOLE_URL | awk {'print $2'})
-          
-          echo "VZ_CONSOLE_STATUS=${VZ_CONSOLE_STATUS}" >> $GITHUB_ENV
-          echo "vz_console_status: $VZ_CONSOLE_STATUS"
-
-          if [ "$VZ_CONSOLE_STATUS" != "200" ];
-          then
-              echo "Error getting Verrazzano console!!!"
-          fi
-
-          echo "Verrazzano console is available at https://$VZ_CONSOLE_URL"
-
           CONSOLE_PWD=$( \
             kubectl get secret \
               --namespace verrazzano-system verrazzano -o jsonpath={.data.password} | base64 --decode; echo \
@@ -525,6 +512,8 @@ jobs:
           echo "Verrazzano console password: ${CONSOLE_PWD}"
           echo "============================================="
           
+          # removed curl references
+
       - name: Deploy Hello-Helidon on V8o
         run: |
           export KUBECONFIG=$KUBECONFIG
@@ -545,16 +534,6 @@ jobs:
           )
           echo "HOST=${HOST}" >> $GITHUB_ENV
 
-          curl -sk -X GET "https://${HOST}/greet"
-          
-          curl -sk -X GET "https://${HOST}/greet" | grep "Hello World"
-          result=$?
-          echo $result
-
-          if [ "${result}" != "0" ];
-          then
-              echo "Error deploying hello-helidon on Verrazzano!!!"
-              exit 1
-          fi
+          # removed curl references
 
           echo "hello-helidon sample deployed on Verrazzano successfully!"
