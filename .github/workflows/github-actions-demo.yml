@@ -312,12 +312,12 @@ jobs:
 
           echo "ACTIVE nodes count: $ACTIVE_NODES_COUNT"
 
-          wait_time=$(date -ud "20 minute" +%s)
+          wait_time=$(date -ud "30 minute" +%s)
           while [[ "$ACTIVE_NODES_COUNT" != "${{secrets.NODE_POOL_SIZE}}" ]];
           do
               if [ $(date -u +%s) -gt $wait_time ];
               then
-                  echo "Not all nodes become ACTIVE in 20 mins !!"
+                  echo "Not all nodes become ACTIVE in 30 mins !!"
                   exit 1
               fi
               echo "Waiting for all nodes to become ACTIVE.."
@@ -359,12 +359,12 @@ jobs:
           if [ "$K8S_API_STATE" != "0" ];
           then
               echo "Kubernetes Nodes Condition is not ACTIVE, let's wait..."
-              wait_time=$(date -ud "10 minute" +%s)
+              wait_time=$(date -ud "20 minute" +%s)
               while [[ "$K8S_API_STATE" != "0" ]];
               do
                   if [ $(date -u +%s) -gt $wait_time ];
                   then
-                      echo "K8s nodes condition has not become ACTIVE in 10 mins !!"
+                      echo "K8s nodes condition has not become ACTIVE in 20 mins !!"
                       exit 1
                   fi
                   echo "Waiting for K8s nodes condition to become ACTIVE.."
@@ -469,7 +469,7 @@ jobs:
           echo "VZ_STATE=${VZ_STATE}" >> $GITHUB_ENV
           echo "Verrazzano CRD status: $VZ_STATUS"
 
-          wait_time=$(date -ud "30 minute" +%s)
+          wait_time=$(date -ud "35 minute" +%s)
           echo "wait_time=${wait_time}" >> $GITHUB_ENV
           echo "wait_time: $wait_time"
           echo "vz_state: $VZ_STATE"
@@ -478,7 +478,7 @@ jobs:
           do
               if [ $(date -u +%s) -gt $wait_time ];
               then
-                  echo "Verrazzano installation is not complete even after 30 mins !!"
+                  echo "Verrazzano installation is not complete even after 35 mins !!"
                   exit 1
               fi
               echo "Waiting for Verrazzano installation to be completed..."
