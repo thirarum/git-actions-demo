@@ -483,7 +483,9 @@ jobs:
               fi
               echo "Waiting for Verrazzano installation to be completed..."
               sleep 20s
+              kubectl get verrazzano
               VZ_STATE=$(kubectl get verrazzano | grep verrazzano-admin | awk {'print $2'})
+              echo "VZ_STATE=${VZ_STATE}" >> $GITHUB_ENV
           done
 
           echo "Verrazzano installation is complete!!!"
