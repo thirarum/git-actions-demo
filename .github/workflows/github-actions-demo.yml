@@ -500,16 +500,16 @@ jobs:
               awk {'print $3'} \
           )
           echo "$VZ_CONSOLE_URL=${VZ_CONSOLE_URL}" >> $GITHUB_ENV
-          echo "vz_console_url: $VZ_CONSOLE_URL"
 
+          curl -s -I https://${VZ_CONSOLE_URL}
           VZ_CONSOLE_STATUS=$(curl -s -I https://${VZ_CONSOLE_URL} | awk {'print $2'})
+          
           echo "VZ_CONSOLE_STATUS=${VZ_CONSOLE_STATUS}" >> $GITHUB_ENV
           echo "vz_console_status: $VZ_CONSOLE_STATUS"
 
           if [ "${VZ_CONSOLE_STATUS}" != "200" ];
           then
               echo "Error getting Verrazzano console!!!"
-              exit 1
           fi
 
           echo "Verrazzano console is available at https://${VZ_CONSOLE_URL}"
