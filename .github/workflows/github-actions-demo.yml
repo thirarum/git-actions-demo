@@ -520,7 +520,7 @@ jobs:
           fi
 
           echo "============================================="
-          echo "Verrazzano console url: https://${VZ_CONSOLE_URL}
+          echo "Verrazzano console url: https://${VZ_CONSOLE_URL}"
           echo "Verrazzano console password: ${CONSOLE_PWD}"
           echo "============================================="
 
