@@ -4,17 +4,19 @@ jobs:
   test_curl:
     runs-on: ubuntu-latest
     steps:
-      - name: Get IP of build machine
-        id: get-ip-address
-        run: |
-          myIP=$(dig @ns1.google.com TXT o-o.myaddr.l.google.com +short)
-          echo "myIP=${myIP}"
-          echo "myIP=${myIP}" >> GITHUB_ENV
       - name: Invoke curl
         run: |
-          curl -k -v https://${{secrets.VZ_CONSOLE_URL}}
-          ping $myIP
-      - name: Get Verrazzano console status
-        uses: wei/curl@master
-        with:
-          args: https://${{secrets.VZ_CONSOLE_URL}}
+          VZ_CONSOLE_URL=${{secrets.VZ_CONSOLE_URL}}
+          echo "vz_console_url: $VZ_CONSOLE_URL"
+
+          curl -k -v https://${VZ_CONSOLE_URL}
+          VZ_CONSOLE_STATUS=$(curl -k -s -I https://${VZ_CONSOLE_URL} | awk {'print $2'} | head -n 1)
+
+          echo "VZ_CONSOLE_STATUS=${VZ_CONSOLE_STATUS}" >> $GITHUB_ENV
+          echo "vz_console_status: $VZ_CONSOLE_STATUS"
+          if [ "${VZ_CONSOLE_STATUS}" != "200" ];
+          then
+            echo "Error getting Verrazzano console!!!"
+            exit 1
+          fi
+          echo "Verrazzano console is available at https://${VZ_CONSOLE_URL}"
