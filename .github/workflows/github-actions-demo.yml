@@ -6,5 +6,5 @@ jobs:
     steps:
       - name: Get Verrazzano console status
         uses: wei/curl@master
-        with: |
+        with:
           args: https://${{secrets.VZ_CONSOLE_URL}}
