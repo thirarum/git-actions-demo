@@ -285,12 +285,12 @@ jobs:
               sleep 10s
               CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
               echo "CLUSTER_ID=${CLUSTER_ID}" >> $GITHUB_ENV
-              if [ ! -z "$CLUSTER_ID" ];
-              then
-                  echo "OKE Cluster is ACTIVE now!!!"
-              fi
           done
-
+          
+          echo "==========================================================="          
+          echo "OKE Cluster is successfully configured and is ACTIVE now!!!"
+          echo "==========================================================="
+          
       - name: Wait for all nodes to become ACTIVE
         run: |          
           echo "Get NODE_POOL_ID"
@@ -310,7 +310,7 @@ jobs:
           ACTIVE_NODES_COUNT=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/\,//g' | sed 's/ //g' | wc -l"))
           echo "ACTIVE_NODES_COUNT=${ACTIVE_NODES_COUNT}" >> $GITHUB_ENV
 
-          echo "ACTIVE nodes count: $ACTIVE_NODES_COUNT"
+          echo "Nodes currently ACTIVE: $ACTIVE_NODES_COUNT"
 
           wait_time=$(date -ud "30 minute" +%s)
           while [[ "$ACTIVE_NODES_COUNT" != "${{secrets.NODE_POOL_SIZE}}" ]];
@@ -324,11 +324,12 @@ jobs:
               sleep 10s
               ACTIVE_NODES_COUNT=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/\,//g' | sed 's/ //g' | wc -l"))
               echo "ACTIVE_NODES_COUNT=${ACTIVE_NODES_COUNT}" >> $GITHUB_ENV
-              if [[ "$ACTIVE_NODES_COUNT" == "${{secrets.NODE_POOL_SIZE}}" ]];
-              then
-                  echo "All nodes are ACTIVE now!!!"
-              fi
+              echo "Nodes currently ACTIVE: $ACTIVE_NODES_COUNT"
           done
+
+          echo "============================"
+          echo "All nodes are ACTIVE now!!!"
+          echo "============================"
 
       - name: Checking Kubernetes Nodes Condition
         run: |
@@ -371,12 +372,12 @@ jobs:
                   sleep 10s
                   kubectl get nodes -o wide
                   K8S_API_STATE=$?
-                  if [[ "$K8S_API_STATE" == "0" ]];
-                  then
-                      echo "K8s nodes condition is ACTIVE now!!!"
-                  fi
               done
-          fi          
+          fi
+
+          echo "============================================"
+          echo "Overall K8s nodes condition is ACTIVE now!!!"
+          echo "============================================"
 
   install_v8o:
     needs: create_oke_cluster
@@ -483,13 +484,14 @@ jobs:
               fi
               echo "Waiting for Verrazzano installation to be completed..."
               sleep 20s
-              kubectl get verrazzano
               VZ_STATE=$(kubectl get verrazzano | grep verrazzano-admin | awk {'print $2'})
               echo "VZ_STATE=${VZ_STATE}" >> $GITHUB_ENV
           done
 
-          echo "Verrazzano installation is complete!!!"
+          echo "=================================================="
+          echo "Verrazzano installation completed successfully!!!"
           kubectl get verrazzano
+          echo "=================================================="
           
           echo "Get console URLs"
           kubectl get vz -o jsonpath="{.items[].status.instance}" | jq .
@@ -506,13 +508,21 @@ jobs:
               --namespace verrazzano-system verrazzano -o jsonpath={.data.password} | base64 --decode; echo \
           )
           echo "CONSOLE_PWD=${CONSOLE_PWD}" >> $GITHUB_ENV
-          echo "console_pwd: $CONSOLE_PWD"
+
+          VZ_CONSOLE_STATUS=$(curl -k -s -I https://${VZ_CONSOLE_URL} | awk {'print $2'} | head -n 1)
+
+          echo "VZ_CONSOLE_STATUS=${VZ_CONSOLE_STATUS}" >> $GITHUB_ENV
+          echo "vz_console_status: $VZ_CONSOLE_STATUS"
+          if [ "${VZ_CONSOLE_STATUS}" != "200" ];
+          then
+            echo "Error getting Verrazzano console!!!"
+            exit 1
+          fi
 
           echo "============================================="
+          echo "Verrazzano console url: https://${VZ_CONSOLE_URL}
           echo "Verrazzano console password: ${CONSOLE_PWD}"
           echo "============================================="
-          
-          # removed curl references
 
       - name: Deploy Hello-Helidon on V8o
         run: |
@@ -534,6 +544,16 @@ jobs:
           )
           echo "HOST=${HOST}" >> $GITHUB_ENV
 
-          # removed curl references
+          curl -sk -X GET "https://${HOST}/greet" | grep "Hello World"
+          result=$?
 
+          if [ "${result}" != "0" ];
+          then
+              echo "Error deploying hello-helidon on Verrazzano!!!"
+              exit 1
+          fi
+
+          echo "========================================================="
           echo "hello-helidon sample deployed on Verrazzano successfully!"
+          echo "========================================================="
+
