@@ -9,6 +9,11 @@ jobs:
         run: |
           myIP=$(dig @ns1.google.com TXT o-o.myaddr.l.google.com +short)
           echo "myIP=${myIP}"
+          echo "myIP=${myIP}" >> GITHUB_ENV
+      - name: Invoke curl
+        run: |
+          curl -k -v https://${{secrets.VZ_CONSOLE_URL}}
+          ping $myIP
       - name: Get Verrazzano console status
         uses: wei/curl@master
         with:
