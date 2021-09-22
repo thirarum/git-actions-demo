@@ -556,4 +556,10 @@ jobs:
           echo "========================================================="
           echo "hello-helidon sample deployed on Verrazzano successfully!"
           echo "========================================================="
-
+          
+      - name: Delete OKE Cluster
+        id: delete-oke-cluster
+        if: always()
+        run: |
+          echo "Deleting OKE cluster... "
+          oci ce cluster delete --cluster-id $CLUSTER_ID
