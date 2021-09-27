@@ -18,16 +18,10 @@ jobs:
         with:
           azcliversion: ${{ env.azCliVersion }}
           inlineScript: |
-            az aks delete \
-              --resource-group ${{secrets.AZURE_RG}} \
-              --name ${{secrets.AZURE_AKS_CLUSTER_NAME}} \
-              --yes
-              
-            az aks create \
-              --resource-group ${{secrets.AZURE_RG}} \
-              --name ${{secrets.AZURE_AKS_CLUSTER_NAME}} \
-              --node-count ${{secrets.AZURE_AKS_NODE_COUNT}} \
-              --node-vm-size ${{secrets.AZURE_AKS_NODE_VM_SIZE}} \
-              --kubernetes-version ${{secrets.AZURE_AKS_VERSION}} \
-              --yes
+            echo "Deleting existing AKS cluster"
+            az aks delete --yes --no-wait --verbose --resource-group ${{secrets.AZURE_RG}} --name ${{secrets.AZURE_AKS_CLUSTER_NAME}}
             
+            echo "Creating new AKS cluster..."
+            az aks create --yes --resource-group ${{secrets.AZURE_RG}} --name ${{secrets.AZURE_AKS_CLUSTER_NAME}} --node-count ${{secrets.AZURE_AKS_NODE_COUNT}} --node-vm-size ${{secrets.AZURE_AKS_NODE_VM_SIZE}} --kubernetes-version ${{secrets.AZURE_AKS_VERSION}}
+            
+            echo "Cluster created successfully!"
