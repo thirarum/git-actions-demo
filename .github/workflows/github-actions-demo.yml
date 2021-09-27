@@ -1,21 +1,19 @@
-name: GitHub Actions Demo
+name: GitHub Actions Demo for V8o on Azure
 on: [push]
 jobs:
-  test_curl:
+  azure_login:
     runs-on: ubuntu-latest
     steps:
-      - name: Invoke curl
-        run: |
-          VZ_CONSOLE_URL=${{secrets.VZ_CONSOLE_URL}}
-          echo "vz_console_url: $VZ_CONSOLE_URL"
-
-          VZ_CONSOLE_STATUS=$(curl -k -s -I https://${VZ_CONSOLE_URL} | awk {'print $2'} | head -n 1)
-
-          echo "VZ_CONSOLE_STATUS=${VZ_CONSOLE_STATUS}" >> $GITHUB_ENV
-          echo "vz_console_status: $VZ_CONSOLE_STATUS"
-          if [ "${VZ_CONSOLE_STATUS}" != "200" ];
-          then
-            echo "Error getting Verrazzano console!!!"
-            exit 1
-          fi
-          echo "Verrazzano console is available at https://${VZ_CONSOLE_URL}"
+      - name: Test Azure Login
+      - uses: azure/login@v1
+        id: azure-login
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          
+      - name: List AKS clusters
+        id: aks-cluster-list
+        uses: azure/CLI@v1
+        with:
+          azcliversion: ${{ env.azCliVersion }}
+          inlineScript: |
+            az aks list
