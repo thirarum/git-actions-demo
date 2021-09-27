@@ -20,7 +20,7 @@ jobs:
           inlineScript: |
             az aks delete \
               --resource-group ${{secrets.AZURE_RG}} \
-              --name ${{secrets.AZURE_AKS_CLUSTER_NAME}}
+              --name ${{secrets.AZURE_AKS_CLUSTER_NAME}} \
               --yes
               
             az aks create \
@@ -28,6 +28,6 @@ jobs:
               --name ${{secrets.AZURE_AKS_CLUSTER_NAME}} \
               --node-count ${{secrets.AZURE_AKS_NODE_COUNT}} \
               --node-vm-size ${{secrets.AZURE_AKS_NODE_VM_SIZE}} \
-              --kubernetes-version ${{secrets.AZURE_AKS_VERSION}}
+              --kubernetes-version ${{secrets.AZURE_AKS_VERSION}} \
               --yes
             
