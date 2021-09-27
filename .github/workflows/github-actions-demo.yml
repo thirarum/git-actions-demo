@@ -1,5 +1,7 @@
 name: GitHub Actions Demo for V8o on Azure
 on: [push]
+env:
+  azCliVersion: 2.6.0
 jobs:
   azure_login:
     runs-on: ubuntu-latest
