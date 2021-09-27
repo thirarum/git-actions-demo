@@ -12,10 +12,19 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
           
-      - name: List AKS clusters
+      - name: Create AKS cluster
         id: aks-cluster-list
         uses: azure/CLI@v1
         with:
           azcliversion: ${{ env.azCliVersion }}
           inlineScript: |
-            az aks list
+            az aks delete \
+              --resource-group ${{secrets.AZURE_RG}} \
+              --name ${{secrets.AZURE_AKS_CLUSTER_NAME}}
+              
+            az aks create \
+              --resource-group ${{secrets.AZURE_RG}} \
+              --name ${{secrets.AZURE_AKS_CLUSTER_NAME}} \
+              --node-count ${{secrets.AZURE_AKS_NODE_COUNT}} \
+              --node-vm-size ${{secrets.AZURE_AKS_NODE_VM_SIZE}} \
+              --kubernetes-version ${{secrets.AZURE_AKS_VERSION}}
