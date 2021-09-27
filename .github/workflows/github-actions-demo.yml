@@ -11,6 +11,10 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create SSH files
+        run: |
+          ssh-keygen -t rsa -b 2048 -f ~/.ssh/gitaction_rsa -q -P ${{secrets.AZURE_SSH_KEYGEN_PASS}}
           
       - name: Create AKS cluster
         id: aks-cluster-list
@@ -22,6 +26,6 @@ jobs:
             az aks delete --yes --no-wait --verbose --resource-group ${{secrets.AZURE_RG}} --name ${{secrets.AZURE_AKS_CLUSTER_NAME}}
             
             echo "Creating new AKS cluster..."
-            az aks create --resource-group ${{secrets.AZURE_RG}} --name ${{secrets.AZURE_AKS_CLUSTER_NAME}} --node-count ${{secrets.AZURE_AKS_NODE_COUNT}} --node-vm-size ${{secrets.AZURE_AKS_NODE_VM_SIZE}} --kubernetes-version ${{secrets.AZURE_AKS_VERSION}} --generate-ssh-keys
+            az aks create --resource-group ${{secrets.AZURE_RG}} --name ${{secrets.AZURE_AKS_CLUSTER_NAME}} --node-count ${{secrets.AZURE_AKS_NODE_COUNT}} --node-vm-size ${{secrets.AZURE_AKS_NODE_VM_SIZE}} --kubernetes-version ${{secrets.AZURE_AKS_VERSION}} --ssh-key-value ~/.ssh/gitaction_rsa.pub
             
             echo "Cluster created successfully!"
