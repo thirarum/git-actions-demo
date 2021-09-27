@@ -26,6 +26,9 @@ jobs:
             az aks delete --yes --no-wait --verbose --resource-group ${{secrets.AZURE_RG}} --name ${{secrets.AZURE_AKS_CLUSTER_NAME}}
             
             echo "Creating new AKS cluster..."
+            ls -lrt /home
+            echo "user: `whoami`"
+            ls -lrt ~/.ssh
             az aks create --resource-group ${{secrets.AZURE_RG}} --name ${{secrets.AZURE_AKS_CLUSTER_NAME}} --node-count ${{secrets.AZURE_AKS_NODE_COUNT}} --node-vm-size ${{secrets.AZURE_AKS_NODE_VM_SIZE}} --kubernetes-version ${{secrets.AZURE_AKS_VERSION}} --ssh-key-value ~/.ssh/gitaction_rsa.pub
             
             echo "Cluster created successfully!"
