@@ -24,6 +24,7 @@ jobs:
           inlineScript: |
             echo "Deleting existing AKS cluster"
             az aks delete --yes --no-wait --verbose --resource-group ${{secrets.AZURE_RG}} --name ${{secrets.AZURE_AKS_CLUSTER_NAME}}
+            az ad sp create-for-rbac --skip-assignment --name myAKSClusterServicePrincipal
             
       # Set the AKS cluster context
       - name: Set the AKS cluster context
