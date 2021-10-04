@@ -1,5 +1,5 @@
 name: GitHub Actions Demo
-on: [test]
+on: [push]
 jobs:
   create_oke_cluster:
     runs-on: ubuntu-latest
