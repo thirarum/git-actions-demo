@@ -1,5 +1,5 @@
 name: GitHub Actions Demo
-on: [push]
+on: [test]
 jobs:
   create_oke_cluster:
     runs-on: ubuntu-latest
@@ -450,18 +450,29 @@ jobs:
           echo "Waiting for VZ operator installation to be completed..."
           kubectl -n verrazzano-install rollout status deployment/verrazzano-platform-operator
 
-          echo "Install Verrazzano using 'dev' profile"
+          echo "Install Verrazzano using '${{secrets.VZ_PROFILE}}' profile"
+
           kubectl apply -f - <<EOF
           apiVersion: install.verrazzano.io/v1alpha1
           kind: Verrazzano
           metadata:
-            name: verrazzano-admin
+            name: letsencrypt-certs-example
           spec:
-            profile: ${{secrets.VZ_PROFILE}}
+            profile: dev
+            environmentName: qaenv
             components:
+              certManager:
+                certificate:
+                  acme:
+                    provider: letsEncrypt
+                    emailAddress: ${{secrets.VZ_ACME_EMAIL}}
+                    environment: staging
               dns:
-                wildcard:
-                  domain: nip.io
+                oci:
+                  ociConfigSecret: oci
+                  dnsZoneCompartmentOCID: ${{secrets.VZ_OCI_DNSZONE_COMPARTMENT_ID}}
+                  dnsZoneOCID: ${{secrets.VZ_OCI_DNSZONE_ID}}
+                  dnsZoneName: ${{secrets.VZ_OCI_DNSZONE_NAME}}
           EOF
 
           sleep 5
