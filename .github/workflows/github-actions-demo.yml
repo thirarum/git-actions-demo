@@ -450,7 +450,20 @@ jobs:
           echo "Waiting for VZ operator installation to be completed..."
           kubectl -n verrazzano-install rollout status deployment/verrazzano-platform-operator
 
-          echo "Install Verrazzano using '${{secrets.VZ_PROFILE}}' profile"
+          cd /home/runner
+          git clone https://github.com/verrazzano/verrazzano.git
+          cd verrazzano/platform-operator/scripts/install
+
+          export KUBE_CONTEXT=$(kubectl config get-contexts -o=name)
+          echo "KUBE_CONTEXT=${KUBE_CONTEXT}" >> $GITHUB_ENV
+          echo "Current kube context===> $KUBE_CONTEXT"
+          
+          ./create_oci_config_secret.sh -o ~/.oci/config -s DEFAULT -k oci -c $KUBE_CONTEXT
+          
+          sleep 10
+          kubectl get secrets
+          
+          echo "Install Verrazzano with Letsencrypt using '${{secrets.VZ_PROFILE}}' profile"
 
           kubectl apply -f - <<EOF
           apiVersion: install.verrazzano.io/v1alpha1
