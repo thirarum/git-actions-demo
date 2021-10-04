@@ -469,7 +469,7 @@ jobs:
           echo "VZ_STATE=${VZ_STATE}" >> $GITHUB_ENV
           echo "Verrazzano CRD status: $VZ_STATUS"
 
-          wait_time=$(date -ud "35 minute" +%s)
+          wait_time=$(date -ud "50 minute" +%s)
           echo "wait_time=${wait_time}" >> $GITHUB_ENV
           echo "wait_time: $wait_time"
           echo "vz_state: $VZ_STATE"
@@ -478,7 +478,7 @@ jobs:
           do
               if [ $(date -u +%s) -gt $wait_time ];
               then
-                  echo "Verrazzano installation is not complete even after 35 mins !!"
+                  echo "Verrazzano installation is not complete even after 50 mins !!"
                   exit 1
               fi
               echo "Waiting for Verrazzano installation to be completed..."
