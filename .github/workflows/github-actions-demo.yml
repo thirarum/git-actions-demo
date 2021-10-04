@@ -59,7 +59,7 @@ jobs:
           CMD="oci ce cluster list \
             --compartment-id $COMPARTMENT_ID \
             --query 'data[?\"name\"==\`CLUSTER_NAME\` && \"lifecycle-state\"!=\`DELETED\`].id'"
-          CMD=$(sed -e "s/\CLUSTER_NAME/${{secrets.CLUSTER_NAME}}/g" <<< $CMD)
+          CMD=$(sed -e "s/\CLUSTER_NAME/v8oqa_managed_cluster-5/g" <<< $CMD)
           CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
           echo "CLUSTER_ID=${CLUSTER_ID}" >> $GITHUB_ENV
           mkdir ~/k8s_dir
@@ -84,12 +84,13 @@ jobs:
           git clone https://github.com/verrazzano/verrazzano.git
           ls
           cd verrazzano/platform-operator/scripts/install
+          sed -i 's/$VERRAZZANO_INSTALL_NS/default/g' create_oci_config_secret.sh
           ls
           export KUBECONFIG=$KUBECONFIG
           export KUBE_CONTEXT=$(kubectl config get-contexts -o=name)
           echo "KUBE_CONTEXT=${KUBE_CONTEXT}" >> $GITHUB_ENV
           echo "Current kube context===> $KUBE_CONTEXT"
-          #./create_oci_config_secret.sh -o ~/.oci/config -s DEFAULT -k oci -c $KUBE_CONTEXT
+          ./create_oci_config_secret.sh -o ~/.oci/config -s DEFAULT -k oci -c $KUBE_CONTEXT
           
           #sleep 10
           kubectl get secrets
