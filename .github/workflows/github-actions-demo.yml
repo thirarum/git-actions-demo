@@ -79,7 +79,7 @@ jobs:
           
       - name: Test Git Clone
         run: |
-          pwd
+          echo $(pwd)
           cd /home/runner
           git clone https://github.com/verrazzano/verrazzano.git
           ls
@@ -88,6 +88,9 @@ jobs:
           export KUBECONFIG=$KUBECONFIG
           export KUBE_CONTEXT=$(kubectl config get-contexts -o=name)
           echo "KUBE_CONTEXT=${KUBE_CONTEXT}" >> $GITHUB_ENV
+          echo "Current kube context===> $KUBE_CONTEXT"
           ./create_oci_config_secret.sh -o ~/.oci/config -s DEFAULT -k oci -c $KUBE_CONTEXT
+          
+          sleep 10
           kubectl get secrets
 
