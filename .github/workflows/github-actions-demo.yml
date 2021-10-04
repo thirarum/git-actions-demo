@@ -461,7 +461,7 @@ jobs:
             components:
               dns:
                 wildcard:
-                  domain: nip.io
+                  domain: ${{secrets.DNS_WILDCARD}}
           EOF
 
           sleep 5
