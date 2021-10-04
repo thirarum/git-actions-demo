@@ -449,10 +449,13 @@ jobs:
 
           echo "Waiting for VZ operator installation to be completed..."
           kubectl -n verrazzano-install rollout status deployment/verrazzano-platform-operator
+          
+          kubectl get verrazzano
 
           cd /home/runner
           git clone https://github.com/verrazzano/verrazzano.git
           cd verrazzano/platform-operator/scripts/install
+          sed -i 's/$VERRAZZANO_INSTALL_NS/default/g' create_oci_config_secret.sh
 
           export KUBE_CONTEXT=$(kubectl config get-contexts -o=name)
           echo "KUBE_CONTEXT=${KUBE_CONTEXT}" >> $GITHUB_ENV
@@ -489,6 +492,8 @@ jobs:
           EOF
 
           sleep 5
+          
+          kubectl get verrazzano
 
           VZ_STATE=$(kubectl get verrazzano | grep verrazzano-admin | awk {'print $2'})
           echo "VZ_STATE=${VZ_STATE}" >> $GITHUB_ENV
