@@ -33,12 +33,12 @@ jobs:
               --name ${{secrets.AZURE_AKS_CLUSTER_NAME}}
             
             echo "Create AKS cluster"
-            az ad sp create-for-rbac --skip-assignment --name azGitAction
             az aks create \
               --resource-group ${{secrets.AZURE_RG}} \
               --name ${{secrets.AZURE_AKS_CLUSTER_NAME}} \
               --node-count ${{secrets.AZURE_AKS_NODE_COUNT}} \
               --generate-ssh-keys \
+              --service-principal b02025bc-0dcb-4dd2-806d-f35262a5a150
               --node-vm-size ${{secrets.AZURE_AKS_NODE_VM_SIZE}} \
               --kubernetes-version ${{secrets.AZURE_AKS_VERSION}}            
             
