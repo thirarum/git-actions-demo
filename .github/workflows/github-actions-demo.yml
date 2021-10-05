@@ -37,6 +37,7 @@ jobs:
               --resource-group ${{secrets.AZURE_RG}} \
               --name ${{secrets.AZURE_AKS_CLUSTER_NAME}} \
               --node-count ${{secrets.AZURE_AKS_NODE_COUNT}} \
+              --generate-ssh-keys \
               --node-vm-size ${{secrets.AZURE_AKS_NODE_VM_SIZE}} \
               --kubernetes-version ${{secrets.AZURE_AKS_VERSION}}            
             
