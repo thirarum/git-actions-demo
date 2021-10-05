@@ -19,5 +19,7 @@ jobs:
           creds: '${{ secrets.AZURE_CREDENTIALS }}'
           cluster-name: ${{secrets.AZURE_AKS_CLUSTER_NAME}}
           resource-group: ${{secrets.AZURE_RG}}
+
+      - name: Run kubectl
         run: |
           kubectl get nodes -o wide
