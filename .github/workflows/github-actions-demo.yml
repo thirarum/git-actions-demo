@@ -33,6 +33,7 @@ jobs:
               --name ${{secrets.AZURE_AKS_CLUSTER_NAME}}
             
             echo "Create AKS cluster"
+            az ad sp create-for-rbac --skip-assignment --name azGitAction
             az aks create \
               --resource-group ${{secrets.AZURE_RG}} \
               --name ${{secrets.AZURE_AKS_CLUSTER_NAME}} \
