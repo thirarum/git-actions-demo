@@ -475,7 +475,7 @@ jobs:
             name: letsencrypt-certs-example
           spec:
             profile: dev
-            environmentName: qaenv
+            environmentName: ${{secrets.VZ_DNSZONE_PREFIX}}
             components:
               certManager:
                 certificate:
@@ -499,16 +499,16 @@ jobs:
           echo "VZ_STATE=${VZ_STATE}" >> $GITHUB_ENV
           echo "Verrazzano CRD status: $VZ_STATUS"
 
-          wait_time=$(date -ud "50 minute" +%s)
+          wait_time=$(date -ud "35 minute" +%s)
           echo "wait_time=${wait_time}" >> $GITHUB_ENV
           echo "wait_time: $wait_time"
           echo "vz_state: $VZ_STATE"
           
-          while [[ "${VZ_STATE}" != "InstallComplete" ]];
+          while [[ "${VZ_STATE}" != "InstallComplete" || "${VZ_STATE}" != "InstallFailed" ]];
           do
               if [ $(date -u +%s) -gt $wait_time ];
               then
-                  echo "Verrazzano installation is not complete even after 50 mins !!"
+                  echo "Verrazzano installation is not complete even after 35 mins !!"
                   exit 1
               fi
               echo "Waiting for Verrazzano installation to be completed..."
@@ -518,9 +518,16 @@ jobs:
           done
 
           echo "=================================================="
-          echo "Verrazzano installation completed successfully!!!"
+          echo "Verrazzano installation completed!"
           kubectl get verrazzano
           echo "=================================================="
+
+          if [ "${VZ_STATE}" == "InstallFailed" ];
+          then
+            echo "Verrazzano installation failed!"
+            kubectl logs -f $(kubectl get pods | grep verrazzano-install |  awk {'print $1'})
+            exit 1
+          fi
           
           echo "Get console URLs"
           kubectl get vz -o jsonpath="{.items[].status.instance}" | jq .
