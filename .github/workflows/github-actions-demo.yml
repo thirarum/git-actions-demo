@@ -53,7 +53,7 @@ jobs:
           echo "wait_time=${wait_time}" >> $GITHUB_ENV
           echo "wait_time: $wait_time"
           
-          while [[ "${VZ_STATE}" != "InstallComplete" || "${VZ_STATE}" != "InstallFailed" ]];
+          while [[ "${VZ_STATE}" != "InstallComplete" ]];
           do
               if [ $(date -u +%s) -gt $wait_time ];
               then
@@ -65,18 +65,20 @@ jobs:
               kubectl get verrazzano
               VZ_STATE=$(kubectl get verrazzano | grep verrazzano-admin | awk {'print $2'})
               echo "VZ_STATE=${VZ_STATE}" >> $GITHUB_ENV
+
+              if [ "${VZ_STATE}" == "InstallFailed" ];
+              then
+                echo "Verrazzano installation failed!"
+                kubectl logs -f $(kubectl get pods | grep verrazzano-install |  awk {'print $1'})
+                exit 1
+              fi
+          
           done
 
           echo "=================================================="
           echo "Verrazzano installation completed!"
           kubectl get verrazzano
           echo "=================================================="
-          if [ "${VZ_STATE}" == "InstallFailed" ];
-          then
-            echo "Verrazzano installation failed!"
-            kubectl logs -f $(kubectl get pods | grep verrazzano-install |  awk {'print $1'})
-            exit 1
-          fi
           
           echo "Get console URLs"
           kubectl get vz -o jsonpath="{.items[].status.instance}" | jq .
