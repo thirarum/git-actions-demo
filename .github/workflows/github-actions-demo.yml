@@ -12,124 +12,26 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Set the AKS cluster context
-        uses: Azure/aks-set-context@v1
+      - name: Create AKS cluster
+        id: aks-cluster-list
+        uses: azure/CLI@v1
         with:
-          creds: '${{ secrets.AZURE_CREDENTIALS }}'
-          cluster-name: ${{secrets.AZURE_AKS_CLUSTER_NAME}}
-          resource-group: ${{secrets.AZURE_RG}}
+          azcliversion: ${{ env.azCliVersion }}
+          inlineScript: |
+            echo "Deleting existing AKS cluster"
+            az aks delete --yes --no-wait \
+              --verbose \
+              --resource-group ${{secrets.AZURE_RG}} \
+              --name ${{secrets.AZURE_AKS_CLUSTER_NAME}}
+            
+            echo "Creating new AKS cluster..."
+            az aks create --resource-group ${{secrets.AZURE_RG}} \
+              --name ${{secrets.AZURE_AKS_CLUSTER_NAME}} \
+              --node-count ${{secrets.AZURE_AKS_NODE_COUNT}} \
+              --node-vm-size ${{secrets.AZURE_AKS_NODE_VM_SIZE}} \
+              --kubernetes-version ${{secrets.AZURE_AKS_VERSION}} \
+              --generate-ssh-keys
+            
+            echo "Cluster created successfully!"
 
-      - name: Install Verrazzano
-        run: |
-          kubectl get nodes -o wide
-          
-          echo "Install Verrazzano Platform Operator"
-          kubectl apply -f https://github.com/verrazzano/verrazzano/releases/download/v1.0.1/operator.yaml
-          
-          echo "Waiting for VZ operator installation to be completed..."
-          kubectl -n verrazzano-install rollout status deployment/verrazzano-platform-operator
-          
-          echo "Install Verrazzano using 'dev' profile"
-          kubectl apply -f - <<EOF
-          apiVersion: install.verrazzano.io/v1alpha1
-          kind: Verrazzano
-          metadata:
-            name: verrazzano-admin
-          spec:
-            profile: dev
-            components:
-              dns:
-                wildcard:
-                  domain: nip.io
-          EOF
-
-          kubectl get verrazzano
-          
-          VZ_STATE=$(kubectl get verrazzano | grep verrazzano-admin | awk {'print $2'})
-          echo "VZ_STATE=${VZ_STATE}" >> $GITHUB_ENV
-          echo "Verrazzano CRD status: $VZ_STATUS"
-          
-          wait_time=$(date -ud "45 minute" +%s)
-          echo "wait_time=${wait_time}" >> $GITHUB_ENV
-          echo "wait_time: $wait_time"
-          
-          while [[ "${VZ_STATE}" != "InstallComplete" ]];
-          do
-              if [ $(date -u +%s) -gt $wait_time ];
-              then
-                  echo "Verrazzano installation is not complete even after 45 mins !!"
-                  exit 1
-              fi
-              echo "Waiting for Verrazzano installation to be completed..."
-              sleep 20s
-              kubectl get verrazzano
-              VZ_STATE=$(kubectl get verrazzano | grep verrazzano-admin | awk {'print $2'})
-              echo "VZ_STATE=${VZ_STATE}" >> $GITHUB_ENV
-
-              if [ "${VZ_STATE}" == "InstallFailed" ];
-              then
-                echo "Verrazzano installation failed!"
-                kubectl logs -f $(kubectl get pods | grep verrazzano-install |  awk {'print $1'})
-                exit 1
-              fi
-          
-          done
-
-          echo "=================================================="
-          echo "Verrazzano installation completed!"
-          kubectl get verrazzano
-          echo "=================================================="
-          
-          echo "Get console URLs"
-          kubectl get vz -o jsonpath="{.items[].status.instance}" | jq .
-          VZ_CONSOLE_URL=$( \
-            kubectl get ingress -n verrazzano-system 2>&1 | \
-              grep verrazzano-ingress | \
-              awk {'print $3'} \
-          )
-          echo "$VZ_CONSOLE_URL=${VZ_CONSOLE_URL}" >> $GITHUB_ENV
-          CONSOLE_PWD=$( \
-            kubectl get secret \
-              --namespace verrazzano-system verrazzano -o jsonpath={.data.password} | base64 --decode; echo \
-          )
-          echo "CONSOLE_PWD=${CONSOLE_PWD}" >> $GITHUB_ENV
-          VZ_CONSOLE_STATUS=$(curl -k -s -I https://${VZ_CONSOLE_URL} | awk {'print $2'} | head -n 1)
-          echo "VZ_CONSOLE_STATUS=${VZ_CONSOLE_STATUS}" >> $GITHUB_ENV
-          echo "vz_console_status: $VZ_CONSOLE_STATUS"
-          if [ "${VZ_CONSOLE_STATUS}" != "200" ];
-          then
-            echo "Error getting Verrazzano console!!!"
-            exit 1
-          fi
-          echo "============================================="
-          echo "Verrazzano console url: https://${VZ_CONSOLE_URL}"
-          echo "Verrazzano console password: ${CONSOLE_PWD}"
-          echo "============================================="
-          
-      - name: Deploy Hello-Helidon on V8o
-        run: |
-          export KUBECONFIG=$KUBECONFIG
-          echo "Deploy hello-helidon sample application on Verrazzano"
-          kubectl create namespace hello-helidon
-          kubectl label namespace hello-helidon verrazzano-managed=true istio-injection=enabled
-          kubectl apply -f https://raw.githubusercontent.com/verrazzano/verrazzano/master/examples/hello-helidon/hello-helidon-comp.yaml
-          kubectl apply -f https://raw.githubusercontent.com/verrazzano/verrazzano/master/examples/hello-helidon/hello-helidon-app.yaml
-          sleep 10
-          kubectl wait --for=condition=Ready pods --all -n hello-helidon --timeout=300s
-          HOST=$( \
-            kubectl get gateway hello-helidon-hello-helidon-appconf-gw \
-              -n hello-helidon \
-              -o jsonpath='{.spec.servers[0].hosts[0]}' \
-          )
-          echo "HOST=${HOST}" >> $GITHUB_ENV
-          curl -sk -X GET "https://${HOST}/greet" | grep "Hello World"
-          result=$?
-          if [ "${result}" != "0" ];
-          then
-              echo "Error deploying hello-helidon on Verrazzano!!!"
-              exit 1
-          fi
-          echo "========================================================="
-          echo "hello-helidon sample deployed on Verrazzano successfully!"
-          echo "========================================================="
-          
+      
