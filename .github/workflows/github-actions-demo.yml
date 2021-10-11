@@ -11,27 +11,22 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Create AKS cluster
-        id: aks-cluster-list
-        uses: azure/CLI@v1
-        with:
-          azcliversion: ${{ env.azCliVersion }}
-          inlineScript: |
-            echo "Deleting existing AKS cluster"
-            az aks delete --yes --no-wait \
-              --verbose \
-              --resource-group ${{secrets.AZURE_RG}} \
-              --name ${{secrets.AZURE_AKS_CLUSTER_NAME}}
+      - run: |
+          az aks get-versions -l eastus -o table
+          echo "Deleting existing AKS cluster"
+          az aks delete --yes --no-wait \
+            --verbose \
+            --resource-group ${{secrets.AZURE_RG}} \
+            --name ${{secrets.AZURE_AKS_CLUSTER_NAME}}
             
-            echo "Creating new AKS cluster..."
-            az aks create --resource-group ${{secrets.AZURE_RG}} \
-              --name ${{secrets.AZURE_AKS_CLUSTER_NAME}} \
-              --node-count ${{secrets.AZURE_AKS_NODE_COUNT}} \
-              --node-vm-size ${{secrets.AZURE_AKS_NODE_VM_SIZE}} \
-              --kubernetes-version ${{secrets.AZURE_AKS_VERSION}} \
-              --generate-ssh-keys
+          echo "Creating new AKS cluster..."
+          az aks create --resource-group ${{secrets.AZURE_RG}} \
+            --name ${{secrets.AZURE_AKS_CLUSTER_NAME}} \
+            --node-count ${{secrets.AZURE_AKS_NODE_COUNT}} \
+            --node-vm-size ${{secrets.AZURE_AKS_NODE_VM_SIZE}} \
+            --kubernetes-version ${{secrets.AZURE_AKS_VERSION}} \
+            --generate-ssh-keys
             
-            echo "Cluster created successfully!"
+          echo "Cluster created successfully!"
 
       
