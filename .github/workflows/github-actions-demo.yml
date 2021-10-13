@@ -570,6 +570,7 @@ jobs:
           echo "========================================================="
 
   delete_oke_cluster:
+    needs: install_v8o
     runs-on: ubuntu-latest
     if: always()
     steps:
