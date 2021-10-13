@@ -615,32 +615,36 @@ jobs:
           CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
           echo "CLUSTER_ID=${CLUSTER_ID}" >> $GITHUB_ENV
 
-          if [ -z "${CLUSTER_ID}" ];
+          if [ ! -z "${CLUSTER_ID}" ];
           then
-              echo "Cluster '${CLUSTER_NAME}' not found under compartment '${COMPARTMENT_NAME}' !!"
-              exit 1
+              # Delete cluster
+              echo "Deleting OKE cluster... "
+              oci ce cluster delete \
+                --cluster-id $CLUSTER_ID \
+                --force \
+                --wait-for-state SUCCEEDED \
+                --wait-for-state FAILED
+
+              if [ "$?" != "0" ];
+              then
+                  echo "Unable to delete OKE cluster!!!"
+                  exit 1
+              fi
           fi
 
-          # Delete cluster
-          echo "Deleting OKE cluster... "
-          oci ce cluster delete \
-            --cluster-id $CLUSTER_ID \
-            --force \
-            --wait-for-state SUCCEEDED \
-            --wait-for-state FAILED
-
-          if [ "$?" != "0" ];
-          then
-              echo "Unable to delete OKE cluster!!!"
-              exit 1
-          fi
-
-          VCN_ID=$( \
-            oci network vcn list \
-              --compartment-id $COMPARTMENT_ID \
-              --query data[*].id | grep ocid | sed 's/"//g' | sed 's/ //g' \
-            )
+          CMD="oci network vcn list \
+            --compartment-id $COMPARTMENT_ID \
+            --query 'data[?\"display-name\"==\`VCN_NAME\` && \"dns-label\"==\`DNS_LABEL\`].id'"
+          CMD=$(sed -e "s/\VCN_NAME/${{secrets.VCN_NAME}}/g" <<< $CMD)
+          CMD=$(sed -e "s/\DNS_LABEL/${{secrets.DNS_LABEL}}/g" <<< $CMD)
+          VCN_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
           echo "VCN_ID=${VCN_ID}" >> $GITHUB_ENV
+          
+          if [ -z "${VCN_ID}" ];
+          then
+              echo "VCN not found, delete cluster task completed!"
+              exit 0
+          fi
 
           # Delete LB's (execute 2 times) (one for Ngnix and another one for Istio)
           LB_SUBNET_ID=$( \
