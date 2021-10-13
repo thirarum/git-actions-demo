@@ -568,10 +568,34 @@ jobs:
           echo "========================================================="
           echo "hello-helidon sample deployed on Verrazzano successfully!"
           echo "========================================================="
-          
+
+  delete_oke_cluster:
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Write Config & Key Files
+        id: write-config-files
+        run: |
+          mkdir ~/.oci
+          echo "[DEFAULT]" >> ~/.oci/config
+          echo "user=${{secrets.OCI_USER_OCID}}" >> ~/.oci/config
+          echo "fingerprint=${{secrets.OCI_FINGERPRINT}}" >> ~/.oci/config
+          echo "region=${{secrets.OCI_REGION}}" >> ~/.oci/config
+          echo "tenancy=${{secrets.OCI_TENANCY_OCID}}" >> ~/.oci/config
+          echo "key_file=~/.oci/key.pem" >> ~/.oci/config
+          echo "${{secrets.OCI_KEY_FILE}}" >> ~/.oci/key.pem
+      - name: Install OCI CLI
+        run: |
+          curl -L -O https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh
+          chmod +x install.sh
+          ./install.sh --accept-all-defaults
+          echo "/home/runner/bin" >> $GITHUB_PATH
+          exec -l $SHELL
+      - name: 'Fix Config File Permissions'
+        run: |
+          oci setup repair-file-permissions --file ~/.oci/config
+          oci setup repair-file-permissions --file ~/.oci/key.pem
       - name: Delete OKE Cluster
-        id: delete-oke-cluster
-        if: always()
         run: |
           echo "Getting Compartment ID"
           CMD="oci iam compartment list \
@@ -581,7 +605,7 @@ jobs:
           CMD=$(sed -e "s/\COMPARTMENT_NAME/${{secrets.COMPARTMENT_NAME}}/g" <<< $CMD)
           COMPARTMENT_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
           echo "COMPARTMENT_ID=${COMPARTMENT_ID}" >> $GITHUB_ENV
-
+          
           echo "Retrieve OKE cluster ID"
           CMD="oci ce cluster list \
             --compartment-id $COMPARTMENT_ID \
