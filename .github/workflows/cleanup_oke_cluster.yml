@@ -1,13 +1,9 @@
 name: Cleanup OKE Cluster
 on:
   workflow_call:
-    inputs:
+    secrets:
       CLUSTER_NAME:
         required: true
-        type: string
-    secrets:
-      OCI_REGION:
-        required: false
 jobs:
   cleanup_oke_cluster:
     runs-on: ubuntu-latest
