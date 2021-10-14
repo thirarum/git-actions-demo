@@ -87,7 +87,7 @@ jobs:
           apiVersion: install.verrazzano.io/v1alpha1
           kind: Verrazzano
           metadata:
-            name: ${{secrets.VZ_INSTALLATION_ADMIN_NAME}}
+            name: ${{secrets.VZ_INSTALLATION_NAME}}
           spec:
             profile: ${{secrets.VZ_PROFILE}}
           EOF
@@ -96,7 +96,7 @@ jobs:
           
           kubectl get verrazzano
 
-          VZ_STATE=$(kubectl get verrazzano | grep ${{secrets.VZ_INSTALLATION_ADMIN_NAME}} | awk {'print $2'})
+          VZ_STATE=$(kubectl get verrazzano | grep ${{secrets.VZ_INSTALLATION_NAME}} | awk {'print $2'})
           echo "VZ_STATE=${VZ_STATE}" >> $GITHUB_ENV
           echo "Verrazzano CRD status: $VZ_STATE"
 
@@ -113,7 +113,7 @@ jobs:
               echo "Waiting for Verrazzano installation to be completed..."
               sleep 20s
               kubectl get verrazzano
-              VZ_STATE=$(kubectl get verrazzano | grep ${{secrets.VZ_INSTALLATION_ADMIN_NAME}} | awk {'print $2'})
+              VZ_STATE=$(kubectl get verrazzano | grep ${{secrets.VZ_INSTALLATION_NAME}} | awk {'print $2'})
               echo "VZ_STATE=${VZ_STATE}" >> $GITHUB_ENV
 
               if [ "${VZ_STATE}" == "InstallFailed" ];
