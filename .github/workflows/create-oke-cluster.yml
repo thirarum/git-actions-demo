@@ -2,12 +2,12 @@ name: Create OKE Cluster
 on:
   workflow_call:
     inputs:
-      username:
+      CLUSTER_NAME:
         required: true
         type: string
     secrets:
-      token:
-        required: true
+      OCI_REGION:
+        required: false
 jobs:
   create_oke_cluster:
     runs-on: ubuntu-latest
@@ -207,7 +207,7 @@ jobs:
           CMD="oci ce cluster create \
             --compartment-id $COMPARTMENT_ID \
             --kubernetes-version ${{secrets.K8S_VERSION}} \
-            --name ${{secrets.CLUSTER_NAME}} \
+            --name ${{inputs.CLUSTER_NAME}} \
             --vcn-id $VCN_ID \
             --endpoint-public-ip-enabled true \
             --endpoint-subnet-id $PUBLIC_SUBNET_ID \
@@ -225,7 +225,7 @@ jobs:
           CMD="oci ce cluster list \
             --compartment-id $COMPARTMENT_ID \
             --query 'data[?\"name\"==\`CLUSTER_NAME\` && \"lifecycle-state\"!=\`DELETED\`].id'"
-          CMD=$(sed -e "s/\CLUSTER_NAME/${{secrets.CLUSTER_NAME}}/g" <<< $CMD)
+          CMD=$(sed -e "s/\CLUSTER_NAME/${{inputs.CLUSTER_NAME}}/g" <<< $CMD)
           CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))          
           echo "CLUSTER_ID=${CLUSTER_ID}" >> $GITHUB_ENV
 
@@ -275,7 +275,7 @@ jobs:
           CMD="oci ce cluster list \
             --compartment-id $COMPARTMENT_ID \
             --query 'data[?\"name\"==\`CLUSTER_NAME\` && \"lifecycle-state\"==\`ACTIVE\`].id'"
-          CMD=$(sed -e "s/\CLUSTER_NAME/${{secrets.CLUSTER_NAME}}/g" <<< $CMD)
+          CMD=$(sed -e "s/\CLUSTER_NAME/${{inputs.CLUSTER_NAME}}/g" <<< $CMD)
           echo "CMD=${CMD}" >> $GITHUB_ENV
           
           CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
@@ -345,7 +345,7 @@ jobs:
           echo "Checking the condition of the Kubernetes node, as indicated by the Kubernetes API server"
           
           mkdir -p ~/k8s_dir
-          KUBECONFIG_FILE=/home/runner/k8s_dir/${{secrets.CLUSTER_NAME}}.conf
+          KUBECONFIG_FILE=/home/runner/k8s_dir/${{inputs.CLUSTER_NAME}}.conf
           rm -rf $KUBECONFIG_FILE
 
           oci ce cluster create-kubeconfig \
