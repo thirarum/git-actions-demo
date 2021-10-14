@@ -2,8 +2,33 @@ name: Cleanup OKE Cluster
 on:
   workflow_call:
     secrets:
+      OCI_USER_OCID:
+        required: true
+      OCI_FINGERPRINT:
+        required: true
+      OCI_REGION:
+        required: true
+      OCI_TENANCY_OCID:
+        required: true
+      OCI_KEY_FILE:
+        required: true
+      API_ENDPOINT_SEC_LIST_INGRESS_DATA:
+        required: true
+      API_ENDPOINT_SEC_LIST_EGRESS_DATA:
+        required: true
+      NODE_SEC_LIST_INGRESS_DATA:
+        required: true
+      NODE_SEC_LIST_EGRESS_DATA:
+        required: true
+      COMPARTMENT_NAME:
+        required: true
+      VCN_NAME:
+        required: true
+      DNS_LABEL:
+        required: true
       CLUSTER_NAME:
         required: true
+
 jobs:
   cleanup_oke_cluster:
     runs-on: ubuntu-latest
