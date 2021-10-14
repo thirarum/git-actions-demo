@@ -130,6 +130,12 @@ jobs:
           kubectl get verrazzano
           echo "=================================================="
           
+          if [ "${{secrets.VZ_PROFILE}}" == "managed-cluster" ];
+          then
+            echo "VZ on managed-cluster, hence console is not applicable!"
+            exit 0
+          fi
+
           echo "Get console URLs"
           kubectl get vz -o jsonpath="{.items[].status.instance}" | jq .
 
