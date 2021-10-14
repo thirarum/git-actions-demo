@@ -1,0 +1,219 @@
+name: Cleanup OKE Cluster
+on:
+  workflow_call:
+    inputs:
+      CLUSTER_NAME:
+        required: true
+        type: string
+    secrets:
+      OCI_REGION:
+        required: false
+jobs:
+  cleanup_oke_cluster:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write Config & Key Files
+        id: write-config-files
+        run: |
+          mkdir ~/.oci
+          echo "[DEFAULT]" >> ~/.oci/config
+          echo "user=${{secrets.OCI_USER_OCID}}" >> ~/.oci/config
+          echo "fingerprint=${{secrets.OCI_FINGERPRINT}}" >> ~/.oci/config
+          echo "region=${{secrets.OCI_REGION}}" >> ~/.oci/config
+          echo "tenancy=${{secrets.OCI_TENANCY_OCID}}" >> ~/.oci/config
+          echo "key_file=~/.oci/key.pem" >> ~/.oci/config
+          echo "${{secrets.OCI_KEY_FILE}}" >> ~/.oci/key.pem
+      - name: Install OCI CLI
+        run: |
+          curl -L -O https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh
+          chmod +x install.sh
+          ./install.sh --accept-all-defaults
+          echo "/home/runner/bin" >> $GITHUB_PATH
+          exec -l $SHELL
+      - name: 'Fix Config File Permissions'
+        run: |
+          oci setup repair-file-permissions --file ~/.oci/config
+          oci setup repair-file-permissions --file ~/.oci/key.pem
+      - name: Delete OKE Cluster
+        run: |
+          echo "Getting Compartment ID"
+          CMD="oci iam compartment list \
+            --compartment-id-in-subtree TRUE \
+            --all \
+            --query 'data[?\"name\"==\`COMPARTMENT_NAME\`].id'"
+          CMD=$(sed -e "s/\COMPARTMENT_NAME/${{secrets.COMPARTMENT_NAME}}/g" <<< $CMD)
+          COMPARTMENT_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
+          echo "COMPARTMENT_ID=${COMPARTMENT_ID}" >> $GITHUB_ENV
+          
+          echo "Retrieve OKE cluster ID"
+          CMD="oci ce cluster list \
+            --compartment-id $COMPARTMENT_ID \
+            --query 'data[?\"name\"==\`CLUSTER_NAME\` && \"lifecycle-state\"!=\`DELETED\`].id'"
+          CMD=$(sed -e "s/\CLUSTER_NAME/${{secrets.CLUSTER_NAME}}/g" <<< $CMD)
+          CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
+          echo "CLUSTER_ID=${CLUSTER_ID}" >> $GITHUB_ENV
+
+          if [ ! -z "${CLUSTER_ID}" ];
+          then
+              # Delete cluster
+              echo "Deleting OKE cluster... "
+              oci ce cluster delete \
+                --cluster-id $CLUSTER_ID \
+                --force \
+                --wait-for-state SUCCEEDED \
+                --wait-for-state FAILED
+
+              if [ "$?" != "0" ];
+              then
+                  echo "Unable to delete OKE cluster!!!"
+                  exit 1
+              fi
+          fi
+
+      - name: Delete Load Balancers and VCN
+        run: |
+          CMD="oci network vcn list \
+            --compartment-id $COMPARTMENT_ID \
+            --query 'data[?\"display-name\"==\`VCN_NAME\` && \"dns-label\"==\`DNS_LABEL\`].id'"
+          CMD=$(sed -e "s/\VCN_NAME/${{secrets.VCN_NAME}}/g" <<< $CMD)
+          CMD=$(sed -e "s/\DNS_LABEL/${{secrets.DNS_LABEL}}/g" <<< $CMD)
+          VCN_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
+          echo "VCN_ID=${VCN_ID}" >> $GITHUB_ENV
+          
+          if [ -z "${VCN_ID}" ];
+          then
+              echo "VCN not found, delete cluster task completed!"
+              exit 0
+          fi
+
+          # Delete LB's (execute 2 times) (one for Ngnix and another one for Istio)
+          LB_SUBNET_ID=$( \
+            oci network subnet list \
+              --compartment-id $COMPARTMENT_ID \
+              --vcn-id $VCN_ID \
+              --query 'data[?"display-name"==`svc-lb-subnet`].id' | grep ocid | sed 's/"//g' | sed 's/ //g' \
+            )
+          echo "LB_SUBNET_ID=${LB_SUBNET_ID}" >> $GITHUB_ENV
+
+          CMD="oci lb load-balancer list \
+            --compartment-id $COMPARTMENT_ID \
+            --query 'data[?contains(\"subnet-ids\",\`LB_SUBNET_ID\`)].id'"
+          CMD=$(sed -e "s/\LB_SUBNET_ID/${LB_SUBNET_ID}/g" <<< $CMD)
+          LB_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g' | sed 's/,//g' | head -n 1"))
+          echo "LB_ID=${LB_ID}" >> $GITHUB_ENV
+
+          if [ ! -z "$LB_ID" ];
+          then
+            echo "Load balancers exist from Verrazzano installation (Nginx / Istio)"
+
+            oci lb load-balancer delete --load-balancer-id $LB_ID --force --wait-for-state SUCCEEDED --wait-for-state FAILED
+
+            CMD="oci lb load-balancer list --compartment-id $COMPARTMENT_ID --query 'data[?contains(\"subnet-ids\",\`LB_SUBNET_ID\`)].id'"
+            CMD=$(sed -e "s/\LB_SUBNET_ID/${LB_SUBNET_ID}/g" <<< $CMD)
+            LB_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g' | sed 's/,//g' | head -n 1"))
+            echo "LB_ID=${LB_ID}" >> $GITHUB_ENV
+
+            oci lb load-balancer delete --load-balancer-id $LB_ID --force --wait-for-state SUCCEEDED --wait-for-state FAILED
+          fi
+
+          # Delete svc-lb-subnet
+          SVC_LB_SUBNET_ID=$( \
+            oci network subnet list \
+              --compartment-id $COMPARTMENT_ID \
+              --vcn-id $VCN_ID \
+              --query 'data[?"display-name"==`svc-lb-subnet`].id' | grep ocid | sed 's/"//g' | sed 's/ //g' \
+          )
+          echo "SVC_LB_SUBNET_ID=${SVC_LB_SUBNET_ID}" >> $GITHUB_ENV
+
+          oci network subnet delete --subnet-id $SVC_LB_SUBNET_ID --force --wait-for-state TERMINATED
+
+          # Delete Node subnet
+          NODE_SUBNET_ID=$( \
+            oci network subnet list \
+              --compartment-id $COMPARTMENT_ID \
+              --vcn-id $VCN_ID \
+              --query 'data[?"display-name"==`node-subnet`].id' | grep ocid | sed 's/"//g' | sed 's/ //g' \
+            )
+          echo "NODE_SUBNET_ID=${NODE_SUBNET_ID}" >> $GITHUB_ENV
+          
+          oci network subnet delete --subnet-id $NODE_SUBNET_ID --force --wait-for-state TERMINATED
+
+          # Delete public-api-endpoint-subnet
+          PUBLIC_SUBNET_ID=$( \
+            oci network subnet list \
+              --compartment-id $COMPARTMENT_ID \
+              --vcn-id $VCN_ID \
+              --query 'data[?"display-name"==`public-api-endpoint-subnet`].id' | grep ocid | sed 's/"//g' | sed 's/ //g' \
+            )
+          echo "PUBLIC_SUBNET_ID=${PUBLIC_SUBNET_ID}" >> $GITHUB_ENV
+
+          oci network subnet delete --subnet-id $PUBLIC_SUBNET_ID --force --wait-for-state TERMINATED
+
+          # Delete DHCP Options (execute 2 times)
+          DHCP_ID=$(oci network dhcp-options list --compartment-id $COMPARTMENT_ID --query data[*].id | grep ocid | sed 's/\"//g' | sed 's/ //g' | sed 's/,//g' | head -n 1)
+          echo "DHCP_ID=${DHCP_ID}" >> $GITHUB_ENV
+
+          oci network dhcp-options delete --dhcp-id $DHCP_ID --force --wait-for-state TERMINATED
+
+          # Delete Security lists
+          LB_SEC_LIST_ID=$( \
+            oci network security-list list \
+              --compartment-id $COMPARTMENT_ID \
+              --vcn-id $VCN_ID \
+              --query 'data[?"display-name"==`svc-lb-sec-list`].id' | grep ocid | sed 's/"//g' | sed 's/ //g' \
+            )
+          echo "LB_SEC_LIST_ID=${LB_SEC_LIST_ID}" >> $GITHUB_ENV
+          
+          oci network security-list delete --security-list-id $LB_SEC_LIST_ID --force --wait-for-state TERMINATED
+
+          NODE_SEC_LIST_ID=$( \
+            oci network security-list list \
+              --compartment-id $COMPARTMENT_ID \
+              --vcn-id $VCN_ID \
+              --query 'data[?"display-name"==`node-sec-list`].id' | grep ocid | sed 's/"//g' | sed 's/ //g' \
+            )
+          echo "NODE_SEC_LIST_ID=${NODE_SEC_LIST_ID}" >> $GITHUB_ENV
+
+          oci network security-list delete --security-list-id $NODE_SEC_LIST_ID --force --wait-for-state TERMINATED
+
+          API_ENDPOINT_SEC_LIST_ID=$( \
+            oci network security-list list \
+              --compartment-id $COMPARTMENT_ID \
+              --vcn-id $VCN_ID \
+              --query 'data[?"display-name"==`api-endpoint-sec-list`].id' | grep ocid | sed 's/"//g' | sed 's/ //g' \
+            )
+          echo "API_ENDPOINT_SEC_LIST_ID=${API_ENDPOINT_SEC_LIST_ID}" >> $GITHUB_ENV
+
+          oci network security-list delete --security-list-id $API_ENDPOINT_SEC_LIST_ID --force --wait-for-state TERMINATED
+
+          # Update default route table by deleting Internet Gateway references from route-rules
+          DEF_ROUTE_TABLE_ID=$( \
+            oci network route-table list \
+              --compartment-id $COMPARTMENT_ID \
+              --vcn-id $VCN_ID \
+              --query data[*].id | grep ocid | sed 's/"//g' | sed 's/ //g' \
+            )
+          echo "DEF_ROUTE_TABLE_ID=${DEF_ROUTE_TABLE_ID}" >> $GITHUB_ENV
+
+          oci network route-table update --rt-id $DEF_ROUTE_TABLE_ID --route-rules '[]' --force
+
+          # Delete Internet Gateway
+          IGW_ID=$( \
+            oci network internet-gateway list \
+              --compartment-id $COMPARTMENT_ID \
+              --vcn-id $VCN_ID \
+              --query 'data[*].id' | grep ocid | sed 's/"//g' | sed 's/ //g' \
+            )
+          echo "IGW_ID=${IGW_ID}" >> $GITHUB_ENV
+
+          oci network internet-gateway delete --ig-id $IGW_ID --force --wait-for-state TERMINATED
+
+          # Delete the VCN
+          oci network vcn delete --vcn-id $VCN_ID --force --wait-for-state TERMINATED
+
+          if [ "$?" == "0" ];
+          then
+              echo "VCN deleted successfully!!!"
+          fi
+
+  
