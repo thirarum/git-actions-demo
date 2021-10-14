@@ -12,14 +12,6 @@ on:
         required: true
       OCI_KEY_FILE:
         required: true
-      API_ENDPOINT_SEC_LIST_INGRESS_DATA:
-        required: true
-      API_ENDPOINT_SEC_LIST_EGRESS_DATA:
-        required: true
-      NODE_SEC_LIST_INGRESS_DATA:
-        required: true
-      NODE_SEC_LIST_EGRESS_DATA:
-        required: true
       COMPARTMENT_NAME:
         required: true
       VCN_NAME:
