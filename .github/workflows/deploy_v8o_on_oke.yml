@@ -1,6 +1,10 @@
 name: Deploy Verrzzano on OKE admin cluster
 on:
   workflow_call:
+    inputs:
+      username:
+        required: false
+        type: string  
     secrets:
       OCI_USER_OCID:
         required: true
