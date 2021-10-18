@@ -163,7 +163,11 @@ jobs:
           oci network subnet delete --subnet-id $PUBLIC_SUBNET_ID --force --wait-for-state TERMINATED
 
           # Delete DHCP Options (execute 2 times)
-          DHCP_ID=$(oci network dhcp-options list --compartment-id $COMPARTMENT_ID --query data[*].id | grep ocid | sed 's/\"//g' | sed 's/ //g' | sed 's/,//g' | head -n 1)
+          DHCP_ID=$( \
+            oci network dhcp-options list \
+            --compartment-id $COMPARTMENT_ID \
+            --vcn-id $VCN_ID \
+            --query data[*].id | grep ocid | sed 's/\"//g' | sed 's/ //g' | sed 's/,//g' | head -n 1)
           echo "DHCP_ID=${DHCP_ID}" >> $GITHUB_ENV
 
           oci network dhcp-options delete --dhcp-id $DHCP_ID --force --wait-for-state TERMINATED
