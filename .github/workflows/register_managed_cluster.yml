@@ -25,7 +25,7 @@ jobs:
         run: |
           oci setup repair-file-permissions --file ~/.oci/config
           oci setup repair-file-permissions --file ~/.oci/key.pem
-      - name: Config KUBECONFIG
+      - name: Setup KUBECONFIG
         run: |
           echo "Getting Compartment ID"
           CMD="oci iam compartment list \
@@ -52,8 +52,6 @@ jobs:
             --region ${{secrets.OCI_REGION}} \
             --token-version 2.0.0 \
             --kube-endpoint PUBLIC_ENDPOINT
-          KUBECONFIG=$KUBECONFIG_ADMIN
-          echo "KUBECONFIG=${KUBECONFIG}" >> $GITHUB_ENV
           echo "KUBECONFIG_ADMIN=${KUBECONFIG_ADMIN}" >> $GITHUB_ENV
           KUBECONFIG=$KUBECONFIG_ADMIN kubectl version 
           KUBECONFIG=$KUBECONFIG_ADMIN kubectl get nodes
@@ -73,8 +71,6 @@ jobs:
             --region ${{secrets.OCI_REGION}} \
             --token-version 2.0.0 \
             --kube-endpoint PUBLIC_ENDPOINT
-          KUBECONFIG=$KUBECONFIG_MANAGED1
-          echo "KUBECONFIG=${KUBECONFIG}" >> $GITHUB_ENV
           echo "KUBECONFIG_MANAGED1=${KUBECONFIG_MANAGED1}" >> $GITHUB_ENV
           KUBECONFIG=$KUBECONFIG_MANAGED1 kubectl version 
           KUBECONFIG=$KUBECONFIG_MANAGED1 kubectl get nodes
@@ -119,7 +115,8 @@ jobs:
             server: "${ADMIN_K8S_SERVER_ADDRESS}"
           EOF
           
-          echo "Preregistration steps completed!"
+          echo "KUBECONFIG_ADMIN=${KUBECONFIG_ADMIN}" >> $GITHUB_ENV
+          echo "KUBECONFIG_MANAGED1=${KUBECONFIG_MANAGED1}" >> $GITHUB_ENV
           
       - name: Registering Managed Cluster
         run: |
