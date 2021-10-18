@@ -124,6 +124,8 @@ jobs:
           
       - name: Registering Managed Cluster
         run: |
+          echo "Register managed cluster"
+          echo "========================"
           KUBECONFIG=$KUBECONFIG_ADMIN kubectl apply -f <<EOF -
           apiVersion: clusters.verrazzano.io/v1alpha1
           kind: VerrazzanoManagedCluster
@@ -137,8 +139,8 @@ jobs:
           
           KUBECONFIG=$KUBECONFIG_ADMIN kubectl wait --for=condition=Ready vmc managed1 -n verrazzano-mc
           
-          KUBECONFIG=$KUBECONFIG_ADMIN \
-            kubectl get secret verrazzano-cluster-managed1-manifest -n verrazzano-mc -o jsonpath={.data.yaml} \
+          KUBECONFIG=$KUBECONFIG_ADMIN kubectl get secret verrazzano-cluster-managed1-manifest \
+            -n verrazzano-mc -o jsonpath={.data.yaml} \
             | base64 --decode > register.yaml
           
           KUBECONFIG=$KUBECONFIG_MANAGED1 kubectl apply -f register.yaml
@@ -154,7 +156,7 @@ jobs:
           KUBECONFIG=$KUBECONFIG_ADMIN VZ_REGISTRATION_URL=$(kubectl get vmc managed1 -n verrazzano-mc -o yaml | grep 'apiUrl' | awk '{print $2}')
           echo "VZ_REGISTRATION_URL=${VZ_REGISTRATION_URL}" >> $GITHUB_ENV
 
-          if [ "${VZ_REGISTRATION_URL}"=="${VZ_CONSOLE_URL}" ];
+          if [ "${VZ_REGISTRATION_URL}"!="${VZ_CONSOLE_URL}" ];
           then
             echo "Error in registering Managed cluster with Admin cluster"
             exit 1
