@@ -108,7 +108,6 @@ jobs:
           
           KUBECONFIG=$KUBECONFIG_ADMIN ADMIN_K8S_SERVER_ADDRESS=$(kubectl config view --minify | grep 'https' | awk '{print $2}')
           echo "ADMIN_K8S_SERVER_ADDRESS=${ADMIN_K8S_SERVER_ADDRESS}" >> $GITHUB_ENV
-          echo "#admin addr: ${ADMIN_K8S_SERVER_ADDRESS}"
           
           KUBECONFIG=$KUBECONFIG_ADMIN kubectl apply -f <<EOF -
           apiVersion: v1
@@ -119,6 +118,8 @@ jobs:
           data:
             server: "${ADMIN_K8S_SERVER_ADDRESS}"
           EOF
+          
+          echo "Preregistration steps completed!"
           
       - name: Registering Managed Cluster
         run: |
