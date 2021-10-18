@@ -44,19 +44,19 @@ jobs:
           CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
           echo "CLUSTER_ID=${CLUSTER_ID}" >> $GITHUB_ENV
           mkdir ~/k8s_dir
-          ADMIN_KUBECONFIG=/home/runner/k8s_dir/${{secrets.CLUSTER_NAME}}.conf
-          rm -rf $ADMIN_KUBECONFIG
+          KUBECONFIG_ADMIN=/home/runner/k8s_dir/${{secrets.CLUSTER_NAME}}.conf
+          rm -rf $KUBECONFIG_ADMIN
           oci ce cluster create-kubeconfig \
             --cluster-id $CLUSTER_ID \
-            --file $ADMIN_KUBECONFIG \
+            --file $KUBECONFIG_ADMIN \
             --region ${{secrets.OCI_REGION}} \
             --token-version 2.0.0 \
             --kube-endpoint PUBLIC_ENDPOINT
-          KUBECONFIG=$ADMIN_KUBECONFIG
+          KUBECONFIG=$KUBECONFIG_ADMIN
           echo "KUBECONFIG=${KUBECONFIG}" >> $GITHUB_ENV
-          echo "ADMIN_KUBECONFIG=${ADMIN_KUBECONFIG}" >> $GITHUB_ENV
-          KUBECONFIG=$ADMIN_KUBECONFIG kubectl version 
-          KUBECONFIG=$ADMIN_KUBECONFIG kubectl get nodes
+          echo "KUBECONFIG_ADMIN=${KUBECONFIG_ADMIN}" >> $GITHUB_ENV
+          KUBECONFIG=$KUBECONFIG_ADMIN kubectl version 
+          KUBECONFIG=$KUBECONFIG_ADMIN kubectl get nodes
 
           echo "Retrieve OKE Managed cluster ID"
           CMD="oci ce cluster list \
@@ -66,21 +66,97 @@ jobs:
           CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
           echo "CLUSTER_ID=${CLUSTER_ID}" >> $GITHUB_ENV
           mkdir ~/k8s_dir
-          MANAGED_KUBECONFIG=/home/runner/k8s_dir/${{secrets.OKE_MANAGED_CLUSTER_NAME}}.conf
-          rm -rf $KUBECONFIG_FILE
+          KUBECONFIG_MANAGED1=/home/runner/k8s_dir/${{secrets.OKE_MANAGED_CLUSTER_NAME}}.conf
+          rm -rf $KUBECONFIG_MANAGED1
           oci ce cluster create-kubeconfig \
             --cluster-id $CLUSTER_ID \
-            --file $MANAGED_KUBECONFIG \
+            --file $KUBECONFIG_MANAGED1 \
             --region ${{secrets.OCI_REGION}} \
             --token-version 2.0.0 \
             --kube-endpoint PUBLIC_ENDPOINT
-          KUBECONFIG=$MANAGED_KUBECONFIG
+          KUBECONFIG=$KUBECONFIG_MANAGED1
           echo "KUBECONFIG=${KUBECONFIG}" >> $GITHUB_ENV
-          echo "MANAGED_KUBECONFIG=${MANAGED_KUBECONFIG}" >> $GITHUB_ENV
-          KUBECONFIG=$MANAGED_KUBECONFIG kubectl version 
-          KUBECONFIG=$MANAGED_KUBECONFIG kubectl get nodes
+          echo "MANAGED_KUBECONFIG=${KUBECONFIG_MANAGED1}" >> $GITHUB_ENV
+          KUBECONFIG=$KUBECONFIG_MANAGED1 kubectl version 
+          KUBECONFIG=$KUBECONFIG_MANAGED1 kubectl get nodes
           
-      - name: Register Managed Cluster
+      - name: Preregistration setup
         run: |
-          KUBECONFIG=$ADMIN_KUBECONFIG kubectl get verrazzano
-          KUBECONFIG=$MANAGED_KUBECONFIG kubectl get verrazzano 
+          KUBECONFIG=$KUBECONFIG_ADMIN kubectl get verrazzano
+          KUBECONFIG=$KUBECONFIG_MANAGED1 kubectl get verrazzano
+          
+          KUBECONFIG=$KUBECONFIG_MANAGED1 MGD_CA_CERT=$(kubectl get secret system-tls \
+               -n verrazzano-system \
+               -o jsonpath="{.data.ca\.crt}" | base64 --decode)
+          echo "MGD_CA_CERT=${MGD_CA_CERT}" >> $GITHUB_ENV
+
+          if [ -z "${MGD_CA_CERT}" ];
+          then
+            echo "Certificates signed by a well-known certificate authority"
+            echo "Follow steps mentioned at https://verrazzano.io/docs/setup/install/multicluster/#tab21"
+            exit 1
+          fi
+          
+          KUBECONFIG=$KUBECONFIG_MANAGED1 kubectl create secret generic "ca-secret-managed1" \
+            -n verrazzano-mc \
+            --from-literal=cacrt="$MGD_CA_CERT" \
+            --dry-run=client \
+            -o yaml > managed1.yaml
+
+          KUBECONFIG=$KUBECONFIG_ADMIN kubectl apply -f managed1.yaml
+          
+          rm managed1.yaml
+          
+          KUBECONFIG=$KUBECONFIG_ADMIN ADMIN_K8S_SERVER_ADDRESS=$(kubectl config view --minify | grep 'https' | awk '{print $2}')
+          echo "ADMIN_K8S_SERVER_ADDRESS=${ADMIN_K8S_SERVER_ADDRESS}" >> $GITHUB_ENV
+          
+          KUBECONFIG=$KUBECONFIG_ADMIN kubectl apply -f <<EOF -
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: verrazzano-admin-cluster
+            namespace: verrazzano-mc
+          data:
+            server: "${ADMIN_K8S_SERVER_ADDRESS}"
+          EOF
+          
+      - name: Registering Managed Cluster
+        run: |
+          KUBECONFIG=$KUBECONFIG_ADMIN kubectl apply -f <<EOF -
+          apiVersion: clusters.verrazzano.io/v1alpha1
+          kind: VerrazzanoManagedCluster
+          metadata:
+            name: managed1
+            namespace: verrazzano-mc
+          spec:
+            description: "Test VerrazzanoManagedCluster object"
+            caSecret: ca-secret-managed1
+          EOF
+          
+          KUBECONFIG=$KUBECONFIG_ADMIN kubectl wait --for=condition=Ready vmc managed1 -n verrazzano-mc
+          
+          KUBECONFIG=$KUBECONFIG_ADMIN \
+            kubectl get secret verrazzano-cluster-managed1-manifest -n verrazzano-mc -o jsonpath={.data.yaml} \
+            | base64 --decode > register.yaml
+          
+          KUBECONFIG=$KUBECONFIG_MANAGED1 kubectl apply -f register.yaml
+          
+          rm register.yaml
+          
+          echo "Verify whether managed cluster registration completed successfully"
+          KUBECONFIG=$KUBECONFIG_ADMIN kubectl get vmc managed1 -n verrazzano-mc -o yaml
+          
+          KUBECONFIG=$KUBECONFIG_ADMIN VZ_CONSOLE_URL=$(kubectl get ingress -n verrazzano-system 2>&1 | grep verrazzano-ingress | awk {'print $3'})
+          echo "VZ_CONSOLE_URL=${VZ_CONSOLE_URL}" >> $GITHUB_ENV
+          
+          KUBECONFIG=$KUBECONFIG_ADMIN VZ_REGISTRATION_URL=$(kubectl get vmc managed1 -n verrazzano-mc -o yaml | grep 'apiUrl' | awk '{print $2}')
+          echo "VZ_REGISTRATION_URL=${VZ_REGISTRATION_URL}" >> $GITHUB_ENV
+
+          if [ "${VZ_REGISTRATION_URL}"=="${VZ_CONSOLE_URL}" ];
+          then
+            echo "Error in registering Managed cluster with Admin cluster"
+            exit 1
+          fi
+          
+          echo "Managed cluster has been registered successfully with Admin cluster"
+
