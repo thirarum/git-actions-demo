@@ -65,7 +65,6 @@ jobs:
           CMD=$(sed -e "s/\CLUSTER_NAME/${{secrets.OKE_MANAGED_CLUSTER_NAME}}/g" <<< $CMD)
           CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
           echo "CLUSTER_ID=${CLUSTER_ID}" >> $GITHUB_ENV
-          mkdir ~/k8s_dir
           KUBECONFIG_MANAGED1=/home/runner/k8s_dir/${{secrets.OKE_MANAGED_CLUSTER_NAME}}.conf
           rm -rf $KUBECONFIG_MANAGED1
           oci ce cluster create-kubeconfig \
