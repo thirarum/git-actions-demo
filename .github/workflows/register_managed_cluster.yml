@@ -75,7 +75,7 @@ jobs:
             --kube-endpoint PUBLIC_ENDPOINT
           KUBECONFIG=$KUBECONFIG_MANAGED1
           echo "KUBECONFIG=${KUBECONFIG}" >> $GITHUB_ENV
-          echo "MANAGED_KUBECONFIG=${KUBECONFIG_MANAGED1}" >> $GITHUB_ENV
+          echo "KUBECONFIG_MANAGED1=${KUBECONFIG_MANAGED1}" >> $GITHUB_ENV
           KUBECONFIG=$KUBECONFIG_MANAGED1 kubectl version 
           KUBECONFIG=$KUBECONFIG_MANAGED1 kubectl get nodes
           
