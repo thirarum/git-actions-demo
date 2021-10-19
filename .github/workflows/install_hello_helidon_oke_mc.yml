@@ -1,0 +1,168 @@
+name: Install hello-helidon app on Verrzzano multi cluster
+on:
+  workflow_call:
+    inputs:
+      CLUSTER_NAME:
+        required: true
+        type: string
+      MANAGED_CLUSTER_NAME:
+        required: false
+        type: string
+    secrets:
+      OCI_REGION:
+        required: false
+jobs:
+  install_hello_helidon:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write Config & Key Files
+        run: |
+          mkdir ~/.oci
+          echo "[DEFAULT]" >> ~/.oci/config
+          echo "user=${{secrets.OCI_USER_OCID}}" >> ~/.oci/config
+          echo "fingerprint=${{secrets.OCI_FINGERPRINT}}" >> ~/.oci/config
+          echo "region=${{secrets.OCI_REGION}}" >> ~/.oci/config
+          echo "tenancy=${{secrets.OCI_TENANCY_OCID}}" >> ~/.oci/config
+          echo "key_file=~/.oci/key.pem" >> ~/.oci/config
+          echo "${{secrets.OCI_KEY_FILE}}" >> ~/.oci/key.pem
+          
+      - name: Install OCI CLI
+        run: |
+          curl -L -O https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh
+          chmod +x install.sh
+          ./install.sh --accept-all-defaults
+          echo "/home/runner/bin" >> $GITHUB_PATH
+          exec -l $SHELL
+          
+      - name: 'Fix Config File Permissions'
+        run: |
+          oci setup repair-file-permissions --file ~/.oci/config
+          oci setup repair-file-permissions --file ~/.oci/key.pem
+          
+      - name: Setup KUBECONFIG
+        run: |
+          echo "Getting Compartment ID"
+          CMD="oci iam compartment list \
+            --compartment-id-in-subtree TRUE \
+            --all \
+            --query 'data[?\"name\"==\`COMPARTMENT_NAME\`].id'"
+          CMD=$(sed -e "s/\COMPARTMENT_NAME/${{secrets.COMPARTMENT_NAME}}/g" <<< $CMD)
+          COMPARTMENT_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
+          echo "COMPARTMENT_ID=${COMPARTMENT_ID}" >> $GITHUB_ENV
+          
+          echo "Retrieve OKE Admin cluster ID"
+          CMD="oci ce cluster list \
+            --compartment-id $COMPARTMENT_ID \
+            --query 'data[?\"name\"==\`CLUSTER_NAME\` && \"lifecycle-state\"!=\`DELETED\`].id'"
+          CMD=$(sed -e "s/\CLUSTER_NAME/${{inputs.CLUSTER_NAME}}/g" <<< $CMD)
+          CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
+          echo "CLUSTER_ID=${CLUSTER_ID}" >> $GITHUB_ENV
+          
+          mkdir ~/k8s_dir
+          KUBECONFIG_ADMIN=/home/runner/k8s_dir/${{inputs.CLUSTER_NAME}}.conf
+          rm -rf $KUBECONFIG_ADMIN
+          
+          oci ce cluster create-kubeconfig \
+            --cluster-id $CLUSTER_ID \
+            --file $KUBECONFIG_ADMIN \
+            --region ${{secrets.OCI_REGION}} \
+            --token-version 2.0.0 \
+            --kube-endpoint PUBLIC_ENDPOINT
+            
+          KUBECONFIG=$KUBECONFIG_ADMIN
+          echo "KUBECONFIG=${KUBECONFIG}" >> $GITHUB_ENV
+          echo "KUBECONFIG_ADMIN=${KUBECONFIG_ADMIN}" >> $GITHUB_ENV
+          KUBECONFIG=$KUBECONFIG_ADMIN kubectl version 
+          KUBECONFIG=$KUBECONFIG_ADMIN kubectl get nodes
+          
+          if [ ! -z "${{inputs.MANAGED_CLUSTER_NAME}}" ];
+          then
+            echo "This is hello-helidon multi cluster installation"
+
+            echo "Retrieve OKE Managed cluster ID"
+            CMD="oci ce cluster list \
+              --compartment-id $COMPARTMENT_ID \
+              --query 'data[?\"name\"==\`CLUSTER_NAME\` && \"lifecycle-state\"!=\`DELETED\`].id'"
+            CMD=$(sed -e "s/\CLUSTER_NAME/${{inputs.MANAGED_CLUSTER_NAME}}/g" <<< $CMD)
+            CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
+            echo "CLUSTER_ID=${CLUSTER_ID}" >> $GITHUB_ENV
+            
+            KUBECONFIG_MANAGED1=/home/runner/k8s_dir/${{inputs.MANAGED_CLUSTER_NAME}}.conf
+            rm -rf $KUBECONFIG_MANAGED1
+            
+            oci ce cluster create-kubeconfig \
+              --cluster-id $CLUSTER_ID \
+              --file $KUBECONFIG_MANAGED1 \
+              --region ${{secrets.OCI_REGION}} \
+              --token-version 2.0.0 \
+              --kube-endpoint PUBLIC_ENDPOINT
+              
+            KUBECONFIG=$KUBECONFIG_MANAGED1
+            echo "KUBECONFIG=${KUBECONFIG}" >> $GITHUB_ENV
+            echo "KUBECONFIG_MANAGED1=${KUBECONFIG_MANAGED1}" >> $GITHUB_ENV
+            KUBECONFIG=$KUBECONFIG_MANAGED1 kubectl version 
+            KUBECONFIG=$KUBECONFIG_MANAGED1 kubectl get nodes
+          
+          fi
+          
+      - name: Deploy Hello-Helidon on Verrazzano cluster
+        run: |
+          echo "Deploy hello-helidon sample application on Verrazzano"
+
+          if [ -z "${{inputs.MANAGED_CLUSTER_NAME}}" ];
+          then
+            echo "Deploy on admin cluster (single cluster setup)"
+
+            KUBECONFIG=$KUBECONFIG_ADMIN kubectl create namespace hello-helidon
+            KUBECONFIG=$KUBECONFIG_ADMIN kubectl label namespace hello-helidon verrazzano-managed=true istio-injection=enabled
+            KUBECONFIG=$KUBECONFIG_ADMIN kubectl apply \
+              -f https://raw.githubusercontent.com/verrazzano/verrazzano/v1.0.1/examples/hello-helidon/hello-helidon-comp.yaml
+            KUBECONFIG=$KUBECONFIG_ADMIN kubectl apply \
+              -f https://raw.githubusercontent.com/verrazzano/verrazzano/v1.0.1/examples/hello-helidon/hello-helidon-app.yaml
+
+            sleep 10
+            KUBECONFIG=$KUBECONFIG_ADMIN kubectl wait --for=condition=Ready pods --all -n hello-helidon --timeout=300s
+            sleep 10
+            KUBECONFIG=$KUBECONFIG_ADMIN kubectl wait --for=condition=Ready pods --all -n hello-helidon --timeout=300s
+            
+            KUBECONFIG=$KUBECONFIG_ADMIN HOST=$( \
+              kubectl get gateway hello-helidon-hello-helidon-appconf-gw \
+                -n hello-helidon \
+                -o jsonpath='{.spec.servers[0].hosts[0]}' \
+              )
+            echo "HOST=${HOST}" >> $GITHUB_ENV
+          else
+            echo "Deploy on managed cluster (multi cluster setup)"
+            
+            KUBECONFIG=$KUBECONFIG_ADMIN kubectl apply \
+              -f https://raw.githubusercontent.com/verrazzano/verrazzano/v1.0.1/examples/multicluster/hello-helidon/verrazzano-project.yaml
+            KUBECONFIG=$KUBECONFIG_ADMIN kubectl apply \
+              -f https://raw.githubusercontent.com/verrazzano/verrazzano/v1.0.1/examples/multicluster/hello-helidon/mc-hello-helidon-comp.yaml
+            KUBECONFIG=$KUBECONFIG_ADMIN kubectl apply \
+              -f https://raw.githubusercontent.com/verrazzano/verrazzano/v1.0.1/examples/multicluster/hello-helidon/mc-hello-helidon-app.yaml
+            
+            sleep 10
+            KUBECONFIG=$KUBECONFIG_MANAGED1 kubectl wait --for=condition=Ready pods --all -n hello-helidon --timeout=300s
+            sleep 10
+            KUBECONFIG=$KUBECONFIG_MANAGED1 kubectl wait --for=condition=Ready pods --all -n hello-helidon --timeout=300s
+            
+            KUBECONFIG=$KUBECONFIG_MANAGED1 HOST=$( \
+              kubectl get gateway hello-helidon-hello-helidon-appconf-gw \
+                -n hello-helidon \
+                -o jsonpath='{.spec.servers[0].hosts[0]}' \
+              )
+            echo "HOST=${HOST}" >> $GITHUB_ENV
+          fi
+          
+          curl -sk -X GET "https://${HOST}/greet" | grep "Hello World"
+          result=$?
+
+          if [ "${result}" != "0" ];
+          then
+              echo "Error deploying hello-helidon on Verrazzano!!!"
+              exit 1
+          fi
+
+          echo "========================================================="
+          echo "hello-helidon sample deployed on Verrazzano successfully!"
+          echo "========================================================="
