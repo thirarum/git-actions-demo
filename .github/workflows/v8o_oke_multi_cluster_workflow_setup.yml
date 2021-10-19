@@ -83,7 +83,7 @@ jobs:
 
   register_managed_cluster_with_admin:
     uses: ta9846/git-actions-demo/.github/workflows/register_managed_cluster.yml@vz_oke_multi_cluster
-    needs: create_oke_admin_cluster
+    needs: install_v8o_oke_admin_cluster
     with: 
        CLUSTER_NAME: cluster1
        MANAGED_CLUSTER_NAME: cluster2
