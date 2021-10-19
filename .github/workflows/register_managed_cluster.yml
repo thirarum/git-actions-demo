@@ -87,9 +87,9 @@ jobs:
           KUBECONFIG=$KUBECONFIG_MANAGED1 MGD_CA_CERT=$(kubectl get secret system-tls \
                -n verrazzano-system \
                -o jsonpath="{.data.ca\.crt}" | base64 --decode)
-          echo "MGD_CA_CERT=${MGD_CA_CERT}" >> $GITHUB_ENV
+          #echo "MGD_CA_CERT=${MGD_CA_CERT}" >> $GITHUB_ENV
 
-          if [ -z "${MGD_CA_CERT}" ];
+          if [ "$?" != "0" ];
           then
             echo "Certificates signed by a well-known certificate authority"
             echo "Follow steps mentioned at https://verrazzano.io/docs/setup/install/multicluster/#tab21"
@@ -118,15 +118,9 @@ jobs:
           data:
             server: "${ADMIN_K8S_SERVER_ADDRESS}"
           EOF
-          
-          echo "KUBECONFIG_ADMIN=${KUBECONFIG_ADMIN}" >> $GITHUB_ENV
-          echo "KUBECONFIG_MANAGED1=${KUBECONFIG_MANAGED1}" >> $GITHUB_ENV
-          echo "ADMIN_K8S_SERVER_ADDRESS: $ADMIN_K8S_SERVER_ADDRESS - completed!!!"
-          
+                    
       - name: Registering Managed Cluster
         run: |
-          echo "Register managed cluster"
-          echo "========================"
           KUBECONFIG=$KUBECONFIG_ADMIN kubectl apply -f <<EOF -
           apiVersion: clusters.verrazzano.io/v1alpha1
           kind: VerrazzanoManagedCluster
