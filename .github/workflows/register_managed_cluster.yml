@@ -121,6 +121,7 @@ jobs:
           
           echo "KUBECONFIG_ADMIN=${KUBECONFIG_ADMIN}" >> $GITHUB_ENV
           echo "KUBECONFIG_MANAGED1=${KUBECONFIG_MANAGED1}" >> $GITHUB_ENV
+          echo "ADMIN_K8S_SERVER_ADDRESS: $ADMIN_K8S_SERVER_ADDRESS - completed!!!"
           
       - name: Registering Managed Cluster
         run: |
@@ -151,10 +152,10 @@ jobs:
           KUBECONFIG=$KUBECONFIG_ADMIN kubectl get vmc managed1 -n verrazzano-mc -o yaml
           
           KUBECONFIG=$KUBECONFIG_ADMIN VZ_CONSOLE_URL=$(kubectl get ingress -n verrazzano-system 2>&1 | grep verrazzano-ingress | awk {'print $3'})
-          echo "VZ_CONSOLE_URL=${VZ_CONSOLE_URL}" >> $GITHUB_ENV
+          #echo "VZ_CONSOLE_URL=${VZ_CONSOLE_URL}" >> $GITHUB_ENV
           
           KUBECONFIG=$KUBECONFIG_ADMIN VZ_REGISTRATION_URL=$(kubectl get vmc managed1 -n verrazzano-mc -o yaml | grep 'apiUrl' | awk '{print $2}')
-          echo "VZ_REGISTRATION_URL=${VZ_REGISTRATION_URL}" >> $GITHUB_ENV
+          #echo "VZ_REGISTRATION_URL=${VZ_REGISTRATION_URL}" >> $GITHUB_ENV
 
           if [ "${VZ_REGISTRATION_URL}"!="${VZ_CONSOLE_URL}" ];
           then
