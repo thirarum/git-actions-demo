@@ -107,7 +107,7 @@ jobs:
           rm managed1.yaml
           
           KUBECONFIG=$KUBECONFIG_ADMIN ADMIN_K8S_SERVER_ADDRESS=$(kubectl config view --minify | grep 'https' | awk '{print $2}')
-          echo "ADMIN_K8S_SERVER_ADDRESS=${ADMIN_K8S_SERVER_ADDRESS}" >> $GITHUB_ENV
+          #echo "ADMIN_K8S_SERVER_ADDRESS=${ADMIN_K8S_SERVER_ADDRESS}" >> $GITHUB_ENV
           
           KUBECONFIG=$KUBECONFIG_ADMIN kubectl apply -f <<EOF -
           apiVersion: v1
