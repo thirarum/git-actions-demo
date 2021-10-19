@@ -80,10 +80,38 @@ jobs:
       CLUSTER_NAME: ${{ secrets.OKE_MANAGED_CLUSTER_NAME }}
       VZ_PROFILE: managed-cluster
       VZ_INSTALLATION_NAME: wlsqa-verrazzano-managed
+
+  register_managed_cluster_with_admin:
+    uses: ta9846/git-actions-demo/.github/workflows/register_managed_cluster.yml@vz_oke_multi_cluster
+    needs: create_oke_admin_cluster
+    with: 
+       CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
+       MANAGED_CLUSTER_NAME: ${{ secrets.OKE_MANAGED_CLUSTER_NAME }}
+    secrets:
+      OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+      OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+      OCI_REGION: ${{ secrets.OCI_REGION }}
+      OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+      OCI_KEY_FILE: ${{ secrets.OCI_KEY_FILE }}
+      COMPARTMENT_NAME: ${{ secrets.COMPARTMENT_NAME }}
+      
+  deploy_hello_helidon_on_multi_cluster:
+    uses: ta9846/git-actions-demo/.github/workflows/install_hello_helidon_oke_mc.yml@vz_oke_multi_cluster
+    needs: register_managed_cluster_with_admin
+    with: 
+       CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
+       MANAGED_CLUSTER_NAME: ${{ secrets.OKE_MANAGED_CLUSTER_NAME }}
+    secrets:
+      OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+      OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+      OCI_REGION: ${{ secrets.OCI_REGION }}
+      OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+      OCI_KEY_FILE: ${{ secrets.OCI_KEY_FILE }}
+      COMPARTMENT_NAME: ${{ secrets.COMPARTMENT_NAME }}
       
   cleanup-oke_admin_cluster:
     uses: ta9846/git-actions-demo/.github/workflows/cleanup_oke_cluster.yml@vz_oke_multi_cluster
-    needs: install_v8o_oke_admin_cluster
+    needs: deploy_hello_helidon_on_multi_cluster
     if: always()
     secrets: 
       OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
@@ -98,7 +126,7 @@ jobs:
 
   cleanup-oke_managed_cluster:
     uses: ta9846/git-actions-demo/.github/workflows/cleanup_oke_cluster.yml@vz_oke_multi_cluster
-    needs: install_v8o_oke_managed_cluster
+    needs: deploy_hello_helidon_on_multi_cluster
     if: always()
     secrets: 
       OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
