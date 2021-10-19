@@ -174,11 +174,13 @@ jobs:
           
           KUBECONFIG=$KUBECONFIG_ADMIN VZ_CONSOLE_URL=$(kubectl get ingress -n verrazzano-system 2>&1 | grep verrazzano-ingress | awk {'print $3'})
           #echo "VZ_CONSOLE_URL=${VZ_CONSOLE_URL}" >> $GITHUB_ENV
+          echo "VZ_CONSOLE_URL=${VZ_CONSOLE_URL}"
           
           KUBECONFIG=$KUBECONFIG_ADMIN VZ_REGISTRATION_URL=$(kubectl get vmc managed1 -n verrazzano-mc -o yaml | grep 'apiUrl' | awk '{print $2}')
           #echo "VZ_REGISTRATION_URL=${VZ_REGISTRATION_URL}" >> $GITHUB_ENV
+          echo "VZ_REGISTRATION_URL=${VZ_REGISTRATION_URL}"
 
-          if [ "${VZ_REGISTRATION_URL}"!="${VZ_CONSOLE_URL}" ];
+          if [ "${VZ_REGISTRATION_URL}" != "${VZ_CONSOLE_URL}" ];
           then
             echo "Error in registering Managed cluster with Admin cluster"
             exit 1
