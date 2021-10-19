@@ -85,7 +85,7 @@ jobs:
 
           export KUBECONFIG=$KUBECONFIG
           kubectl version 
-          kubectl get nodes -o wide
+          kubectl get nodes
           
       - name: Install V8o
         run: |
