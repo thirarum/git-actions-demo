@@ -394,7 +394,7 @@ jobs:
           export KUBECONFIG=$KUBECONFIG
          
           kubectl version 
-          kubectl get nodes -o wide
+          kubectl get nodes
           K8S_API_STATE=$?
           echo "K8S_API_STATE=${K8S_API_STATE}" >> $GITHUB_ENV
           
@@ -411,7 +411,7 @@ jobs:
                   fi
                   echo "Waiting for K8s nodes condition to become ACTIVE.."
                   sleep 10s
-                  kubectl get nodes -o wide
+                  kubectl get nodes
                   K8S_API_STATE=$?
               done
           fi
