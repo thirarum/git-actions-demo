@@ -85,8 +85,8 @@ jobs:
     uses: ta9846/git-actions-demo/.github/workflows/register_managed_cluster.yml@vz_oke_multi_cluster
     needs: create_oke_admin_cluster
     with: 
-       CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
-       MANAGED_CLUSTER_NAME: ${{ secrets.OKE_MANAGED_CLUSTER_NAME }}
+       CLUSTER_NAME: cluster1
+       MANAGED_CLUSTER_NAME: cluster2
     secrets:
       OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
       OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
@@ -99,8 +99,8 @@ jobs:
     uses: ta9846/git-actions-demo/.github/workflows/install_hello_helidon_oke_mc.yml@vz_oke_multi_cluster
     needs: register_managed_cluster_with_admin
     with: 
-       CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
-       MANAGED_CLUSTER_NAME: ${{ secrets.OKE_MANAGED_CLUSTER_NAME }}
+       CLUSTER_NAME: cluster1
+       MANAGED_CLUSTER_NAME: cluster2
     secrets:
       OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
       OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
