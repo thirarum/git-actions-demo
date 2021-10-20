@@ -159,6 +159,8 @@ jobs:
             caSecret: ca-secret-managed1
           EOF
           
+          sleep 10s
+          
           KUBECONFIG=$KUBECONFIG_ADMIN kubectl wait --for=condition=Ready vmc managed1 -n verrazzano-mc
           
           KUBECONFIG=$KUBECONFIG_ADMIN kubectl get secret verrazzano-cluster-managed1-manifest \
