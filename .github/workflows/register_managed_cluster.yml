@@ -178,6 +178,13 @@ jobs:
           #echo "VZ_CONSOLE_URL=${VZ_CONSOLE_URL}" >> $GITHUB_ENV
           echo "VZ_CONSOLE_URL=${VZ_CONSOLE_URL}"
           
+          echo "debug 1"
+          kubectl get vmc managed1 -n verrazzano-mc -o yaml 
+          echo "debug 2"
+          kubectl get vmc managed1 -n verrazzano-mc -o yaml | grep 'apiUrl'
+          echo "debug 3"
+          kubectl get vmc managed1 -n verrazzano-mc -o yaml | grep 'apiUrl' | awk '{print $2}'
+          
           KUBECONFIG=$KUBECONFIG_ADMIN VZ_REGISTRATION_URL=$(kubectl get vmc managed1 -n verrazzano-mc -o yaml | grep 'apiUrl' | awk '{print $2}')
           #echo "VZ_REGISTRATION_URL=${VZ_REGISTRATION_URL}" >> $GITHUB_ENV
           echo "VZ_REGISTRATION_URL=${VZ_REGISTRATION_URL}"
