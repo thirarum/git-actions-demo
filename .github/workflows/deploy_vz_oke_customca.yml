@@ -1,6 +1,6 @@
 name: Deploy Verrazzano on OKE using Custom CA certificate
 on:
-  workflow_calltt:
+  workflow_call:
     inputs:
       username:
         required: false
