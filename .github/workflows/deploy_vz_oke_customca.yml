@@ -100,7 +100,7 @@ jobs:
 
           echo "Save signing key pair as a Kubernetes secret"
           kubectl create ns customca-namespace
-          kubectl create secret tls customca --namespace=mynamespace --cert=tls.crt --key=tls.key
+          kubectl create secret tls customca --namespace=customca-namespace --cert=tls.crt --key=tls.key
           
           echo "Verify signing CA"
           kubectl apply -f - <<EOF
