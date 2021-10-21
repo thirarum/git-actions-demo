@@ -1,5 +1,29 @@
 name: Deploy Verrazzano on OKE using Custom CA certificate
-on: [tt]
+on:
+  workflow_calltt:
+    inputs:
+      username:
+        required: false
+        type: string  
+    secrets:
+      OCI_USER_OCID:
+        required: true
+      OCI_FINGERPRINT:
+        required: true
+      OCI_REGION:
+        required: true
+      OCI_TENANCY_OCID:
+        required: true
+      OCI_KEY_FILE:
+        required: true
+      COMPARTMENT_NAME:
+        required: true
+      CLUSTER_NAME:
+        required: true
+      VZ_PROFILE:
+        required: true
+      VZ_INSTALLATION_NAME:
+        required: true
 jobs:
   install_v8o:
     runs-on: ubuntu-latest
@@ -60,7 +84,37 @@ jobs:
 
           export KUBECONFIG=$KUBECONFIG
           kubectl version 
-          kubectl get nodes -o wide
+          kubectl get nodes
+
+      - name: Create Custom CA
+        run: |
+          export KUBECONFIG=$KUBECONFIG
+          echo "Generate a CA private key"
+          openssl genrsa -out tls.key 2048
+          
+          echo "Create a self signed certificate with the 'signing' option set"
+          openssl req \
+            -x509 -new -nodes -key tls.key -subj "/CN=*.sslip.io" \
+            -days 365 -reqexts v3_req -extensions v3_ca \
+            -out tls.crt
+
+          echo "Save signing key pair as a Kubernetes secret"
+          kubectl create ns customca-namespace
+          kubectl create secret tls customca --namespace=mynamespace --cert=tls.crt --key=tls.key
+          
+          echo "Verify signing CA"
+          kubectl apply -f - <<EOF
+          apiVersion: cert-manager.io/v1
+          kind: Issuer
+          metadata:
+            name: ca-issuer
+            namespace: customca-namespace
+          spec:
+            ca:
+              secretName: customca
+          EOF
+          
+          kubectl get issuers ca-issuer -n customca-namespace -o wide
           
       - name: Install V8o
         run: |
@@ -73,7 +127,7 @@ jobs:
           
           kubectl get verrazzano
 
-          echo "Install Verrazzano with default config using '${{secrets.VZ_PROFILE}}' profile"
+          echo "Install Verrazzano using Custom CA"
 
           kubectl apply -f - <<EOF
           apiVersion: install.verrazzano.io/v1alpha1
@@ -82,8 +136,16 @@ jobs:
             name: wlsqa-verrazzano
           spec:
             profile: ${{secrets.VZ_PROFILE}}
+            components:
+              dns:
+                wildcard:
+                  domain: sslip.io
+              certManager:
+                certificate:
+                  ca:
+                    secretName: customca
+                    clusterResourceNamespace: customca-namespace
           EOF
-
           sleep 5
           
           kubectl get verrazzano
@@ -152,248 +214,3 @@ jobs:
           echo "Verrazzano console url: https://${VZ_CONSOLE_URL}"
           echo "Verrazzano console password: ${CONSOLE_PWD}"
           echo "============================================="
-
-      - name: Deploy Hello-Helidon on V8o
-        run: |
-          export KUBECONFIG=$KUBECONFIG
-          echo "Deploy hello-helidon sample application on Verrazzano"
-
-          kubectl create namespace hello-helidon
-          kubectl label namespace hello-helidon verrazzano-managed=true istio-injection=enabled
-          kubectl apply -f https://raw.githubusercontent.com/verrazzano/verrazzano/master/examples/hello-helidon/hello-helidon-comp.yaml
-          kubectl apply -f https://raw.githubusercontent.com/verrazzano/verrazzano/master/examples/hello-helidon/hello-helidon-app.yaml
-
-          sleep 10
-
-          kubectl wait --for=condition=Ready pods --all -n hello-helidon --timeout=300s
-
-          sleep 10
-          kubectl wait --for=condition=Ready pods --all -n hello-helidon --timeout=300s
-
-          HOST=$( \
-            kubectl get gateway hello-helidon-hello-helidon-appconf-gw \
-              -n hello-helidon \
-              -o jsonpath='{.spec.servers[0].hosts[0]}' \
-          )
-          echo "HOST=${HOST}" >> $GITHUB_ENV
-
-          curl -sk -X GET "https://${HOST}/greet" | grep "Hello World"
-          result=$?
-
-          if [ "${result}" != "0" ];
-          then
-              echo "Error deploying hello-helidon on Verrazzano!!!"
-              exit 1
-          fi
-
-          echo "========================================================="
-          echo "hello-helidon sample deployed on Verrazzano successfully!"
-          echo "========================================================="
-
-  delete_oke_cluster:
-    needs: install_v8o
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Write Config & Key Files
-        id: write-config-files
-        run: |
-          mkdir ~/.oci
-          echo "[DEFAULT]" >> ~/.oci/config
-          echo "user=${{secrets.OCI_USER_OCID}}" >> ~/.oci/config
-          echo "fingerprint=${{secrets.OCI_FINGERPRINT}}" >> ~/.oci/config
-          echo "region=${{secrets.OCI_REGION}}" >> ~/.oci/config
-          echo "tenancy=${{secrets.OCI_TENANCY_OCID}}" >> ~/.oci/config
-          echo "key_file=~/.oci/key.pem" >> ~/.oci/config
-          echo "${{secrets.OCI_KEY_FILE}}" >> ~/.oci/key.pem
-      - name: Install OCI CLI
-        run: |
-          curl -L -O https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh
-          chmod +x install.sh
-          ./install.sh --accept-all-defaults
-          echo "/home/runner/bin" >> $GITHUB_PATH
-          exec -l $SHELL
-      - name: 'Fix Config File Permissions'
-        run: |
-          oci setup repair-file-permissions --file ~/.oci/config
-          oci setup repair-file-permissions --file ~/.oci/key.pem
-      - name: Delete OKE Cluster
-        run: |
-          echo "Getting Compartment ID"
-          CMD="oci iam compartment list \
-            --compartment-id-in-subtree TRUE \
-            --all \
-            --query 'data[?\"name\"==\`COMPARTMENT_NAME\`].id'"
-          CMD=$(sed -e "s/\COMPARTMENT_NAME/${{secrets.COMPARTMENT_NAME}}/g" <<< $CMD)
-          COMPARTMENT_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
-          echo "COMPARTMENT_ID=${COMPARTMENT_ID}" >> $GITHUB_ENV
-          
-          echo "Retrieve OKE cluster ID"
-          CMD="oci ce cluster list \
-            --compartment-id $COMPARTMENT_ID \
-            --query 'data[?\"name\"==\`CLUSTER_NAME\` && \"lifecycle-state\"!=\`DELETED\`].id'"
-          CMD=$(sed -e "s/\CLUSTER_NAME/${{secrets.CLUSTER_NAME}}/g" <<< $CMD)
-          CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
-          echo "CLUSTER_ID=${CLUSTER_ID}" >> $GITHUB_ENV
-
-          if [ ! -z "${CLUSTER_ID}" ];
-          then
-              # Delete cluster
-              echo "Deleting OKE cluster... "
-              oci ce cluster delete \
-                --cluster-id $CLUSTER_ID \
-                --force \
-                --wait-for-state SUCCEEDED \
-                --wait-for-state FAILED
-
-              if [ "$?" != "0" ];
-              then
-                  echo "Unable to delete OKE cluster!!!"
-                  exit 1
-              fi
-          fi
-
-          CMD="oci network vcn list \
-            --compartment-id $COMPARTMENT_ID \
-            --query 'data[?\"display-name\"==\`VCN_NAME\` && \"dns-label\"==\`DNS_LABEL\`].id'"
-          CMD=$(sed -e "s/\VCN_NAME/${{secrets.VCN_NAME}}/g" <<< $CMD)
-          CMD=$(sed -e "s/\DNS_LABEL/${{secrets.DNS_LABEL}}/g" <<< $CMD)
-          VCN_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
-          echo "VCN_ID=${VCN_ID}" >> $GITHUB_ENV
-          
-          if [ -z "${VCN_ID}" ];
-          then
-              echo "VCN not found, delete cluster task completed!"
-              exit 0
-          fi
-
-          # Delete LB's (execute 2 times) (one for Ngnix and another one for Istio)
-          LB_SUBNET_ID=$( \
-            oci network subnet list \
-              --compartment-id $COMPARTMENT_ID \
-              --vcn-id $VCN_ID \
-              --query 'data[?"display-name"==`svc-lb-subnet`].id' | grep ocid | sed 's/"//g' | sed 's/ //g' \
-            )
-          echo "LB_SUBNET_ID=${LB_SUBNET_ID}" >> $GITHUB_ENV
-
-          CMD="oci lb load-balancer list \
-            --compartment-id $COMPARTMENT_ID \
-            --query 'data[?contains(\"subnet-ids\",\`LB_SUBNET_ID\`)].id'"
-          CMD=$(sed -e "s/\LB_SUBNET_ID/${LB_SUBNET_ID}/g" <<< $CMD)
-          LB_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g' | sed 's/,//g' | head -n 1"))
-          echo "LB_ID=${LB_ID}" >> $GITHUB_ENV
-
-          if [ ! -z "$LB_ID" ];
-          then
-            echo "Load balancers exist from Verrazzano installation (Nginx / Istio)"
-
-            oci lb load-balancer delete --load-balancer-id $LB_ID --force --wait-for-state SUCCEEDED --wait-for-state FAILED
-
-            CMD="oci lb load-balancer list --compartment-id $COMPARTMENT_ID --query 'data[?contains(\"subnet-ids\",\`LB_SUBNET_ID\`)].id'"
-            CMD=$(sed -e "s/\LB_SUBNET_ID/${LB_SUBNET_ID}/g" <<< $CMD)
-            LB_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g' | sed 's/,//g' | head -n 1"))
-            echo "LB_ID=${LB_ID}" >> $GITHUB_ENV
-
-            oci lb load-balancer delete --load-balancer-id $LB_ID --force --wait-for-state SUCCEEDED --wait-for-state FAILED
-          fi
-
-          # Delete svc-lb-subnet
-          SVC_LB_SUBNET_ID=$( \
-            oci network subnet list \
-              --compartment-id $COMPARTMENT_ID \
-              --vcn-id $VCN_ID \
-              --query 'data[?"display-name"==`svc-lb-subnet`].id' | grep ocid | sed 's/"//g' | sed 's/ //g' \
-          )
-          echo "SVC_LB_SUBNET_ID=${SVC_LB_SUBNET_ID}" >> $GITHUB_ENV
-
-          oci network subnet delete --subnet-id $SVC_LB_SUBNET_ID --force --wait-for-state TERMINATED
-
-          # Delete Node subnet
-          NODE_SUBNET_ID=$( \
-            oci network subnet list \
-              --compartment-id $COMPARTMENT_ID \
-              --vcn-id $VCN_ID \
-              --query 'data[?"display-name"==`node-subnet`].id' | grep ocid | sed 's/"//g' | sed 's/ //g' \
-            )
-          echo "NODE_SUBNET_ID=${NODE_SUBNET_ID}" >> $GITHUB_ENV
-          
-          oci network subnet delete --subnet-id $NODE_SUBNET_ID --force --wait-for-state TERMINATED
-
-          # Delete public-api-endpoint-subnet
-          PUBLIC_SUBNET_ID=$( \
-            oci network subnet list \
-              --compartment-id $COMPARTMENT_ID \
-              --vcn-id $VCN_ID \
-              --query 'data[?"display-name"==`public-api-endpoint-subnet`].id' | grep ocid | sed 's/"//g' | sed 's/ //g' \
-            )
-          echo "PUBLIC_SUBNET_ID=${PUBLIC_SUBNET_ID}" >> $GITHUB_ENV
-
-          oci network subnet delete --subnet-id $PUBLIC_SUBNET_ID --force --wait-for-state TERMINATED
-
-          # Delete DHCP Options (execute 2 times)
-          DHCP_ID=$(oci network dhcp-options list --compartment-id $COMPARTMENT_ID --query data[*].id | grep ocid | sed 's/\"//g' | sed 's/ //g' | sed 's/,//g' | head -n 1)
-          echo "DHCP_ID=${DHCP_ID}" >> $GITHUB_ENV
-
-          oci network dhcp-options delete --dhcp-id $DHCP_ID --force --wait-for-state TERMINATED
-
-          # Delete Security lists
-          LB_SEC_LIST_ID=$( \
-            oci network security-list list \
-              --compartment-id $COMPARTMENT_ID \
-              --vcn-id $VCN_ID \
-              --query 'data[?"display-name"==`svc-lb-sec-list`].id' | grep ocid | sed 's/"//g' | sed 's/ //g' \
-            )
-          echo "LB_SEC_LIST_ID=${LB_SEC_LIST_ID}" >> $GITHUB_ENV
-          
-          oci network security-list delete --security-list-id $LB_SEC_LIST_ID --force --wait-for-state TERMINATED
-
-          NODE_SEC_LIST_ID=$( \
-            oci network security-list list \
-              --compartment-id $COMPARTMENT_ID \
-              --vcn-id $VCN_ID \
-              --query 'data[?"display-name"==`node-sec-list`].id' | grep ocid | sed 's/"//g' | sed 's/ //g' \
-            )
-          echo "NODE_SEC_LIST_ID=${NODE_SEC_LIST_ID}" >> $GITHUB_ENV
-
-          oci network security-list delete --security-list-id $NODE_SEC_LIST_ID --force --wait-for-state TERMINATED
-
-          API_ENDPOINT_SEC_LIST_ID=$( \
-            oci network security-list list \
-              --compartment-id $COMPARTMENT_ID \
-              --vcn-id $VCN_ID \
-              --query 'data[?"display-name"==`api-endpoint-sec-list`].id' | grep ocid | sed 's/"//g' | sed 's/ //g' \
-            )
-          echo "API_ENDPOINT_SEC_LIST_ID=${API_ENDPOINT_SEC_LIST_ID}" >> $GITHUB_ENV
-
-          oci network security-list delete --security-list-id $API_ENDPOINT_SEC_LIST_ID --force --wait-for-state TERMINATED
-
-          # Update default route table by deleting Internet Gateway references from route-rules
-          DEF_ROUTE_TABLE_ID=$( \
-            oci network route-table list \
-              --compartment-id $COMPARTMENT_ID \
-              --vcn-id $VCN_ID \
-              --query data[*].id | grep ocid | sed 's/"//g' | sed 's/ //g' \
-            )
-          echo "DEF_ROUTE_TABLE_ID=${DEF_ROUTE_TABLE_ID}" >> $GITHUB_ENV
-
-          oci network route-table update --rt-id $DEF_ROUTE_TABLE_ID --route-rules '[]' --force
-
-          # Delete Internet Gateway
-          IGW_ID=$( \
-            oci network internet-gateway list \
-              --compartment-id $COMPARTMENT_ID \
-              --vcn-id $VCN_ID \
-              --query 'data[*].id' | grep ocid | sed 's/"//g' | sed 's/ //g' \
-            )
-          echo "IGW_ID=${IGW_ID}" >> $GITHUB_ENV
-
-          oci network internet-gateway delete --ig-id $IGW_ID --force --wait-for-state TERMINATED
-
-          # Delete the VCN
-          oci network vcn delete --vcn-id $VCN_ID --force --wait-for-state TERMINATED
-
-          if [ "$?" == "0" ];
-          then
-              echo "VCN deleted successfully!!!"
-          fi
-          
