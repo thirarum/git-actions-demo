@@ -151,9 +151,7 @@ jobs:
             KUBECONFIG=$KUBECONFIG_ADMIN kubectl apply \
               -f https://raw.githubusercontent.com/verrazzano/verrazzano/v1.0.1/examples/multicluster/hello-helidon/mc-hello-helidon-app.yaml
             
-            sleep 10
-            KUBECONFIG=$KUBECONFIG_MANAGED1 kubectl wait --for=condition=Ready pods --all -n hello-helidon --timeout=300s
-            sleep 10
+            sleep 1m
             KUBECONFIG=$KUBECONFIG_MANAGED1 kubectl wait --for=condition=Ready pods --all -n hello-helidon --timeout=300s
             
             KUBECONFIG=$KUBECONFIG_MANAGED1 HOST=$( \
