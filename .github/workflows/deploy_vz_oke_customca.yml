@@ -103,18 +103,18 @@ jobs:
           kubectl create secret tls customca --namespace=customca-namespace --cert=tls.crt --key=tls.key
           
           echo "Verify signing CA"
-          kubectl apply -f - <<EOF
-          apiVersion: cert-manager.io/v1
-          kind: Issuer
-          metadata:
-            name: ca-issuer
-            namespace: customca-namespace
-          spec:
-            ca:
-              secretName: customca
-          EOF
+          #kubectl apply -f - <<EOF
+          #apiVersion: cert-manager.io/v1
+          #kind: Issuer
+          #metadata:
+          #  name: ca-issuer
+          #  namespace: customca-namespace
+          #spec:
+          #  ca:
+          #    secretName: customca
+          #EOF
           
-          kubectl get issuers ca-issuer -n customca-namespace -o wide
+          #kubectl get issuers ca-issuer -n customca-namespace -o wide
           
       - name: Install V8o
         run: |
