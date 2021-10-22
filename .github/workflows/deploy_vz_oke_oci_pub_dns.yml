@@ -108,12 +108,7 @@ jobs:
           curl -o create_oci_config_secret.sh \
             https://raw.githubusercontent.com/verrazzano/verrazzano/v1.0.1/platform-operator/scripts/install/create_oci_config_secret.sh
           chmod +x create_oci_config_secret.sh
-          
-          export KUBE_CONTEXT=$(kubectl config get-contexts -o=name)
-          echo "KUBE_CONTEXT=${KUBE_CONTEXT}" >> $GITHUB_ENV
-          echo "Current kube context===> $KUBE_CONTEXT"
-          
-          ./create_oci_config_secret.sh -o ~/.oci/config -s DEFAULT -k oci -c $KUBE_CONTEXT
+          ./create_oci_config_secret.sh
           
           sleep 10
           kubectl get secrets
