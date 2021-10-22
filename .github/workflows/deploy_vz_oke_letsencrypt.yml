@@ -1,6 +1,6 @@
 name: Deploy Verrazzano using Letsencrypt and OCI DNS
 on:
-  workflow_calltt:
+  workflow_call:
     inputs:
       username:
         required: false
