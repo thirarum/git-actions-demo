@@ -1,5 +1,5 @@
-name: Setup Verrazzano on OKE using Letsencrypt and OCI DNS
-on: [push]
+name: Setup Verrazzano on OKE using OCI Public DNS
+on: [puttsh]
 jobs:
   create_oke_admin_cluster:
     uses: ta9846/git-actions-demo/.github/workflows/create_oke_cluster.yml@vz_oke_multi_cluster
@@ -25,8 +25,8 @@ jobs:
       NODE_POOL_SIZE: ${{ secrets.NODE_POOL_SIZE }}
       NODE_SHAPE: ${{ secrets.NODE_SHAPE }}
 
-  install_v8o_oke_letsencrypt_oci_dns:
-    uses: ta9846/git-actions-demo/.github/workflows/deploy_vz_oke_letsencrypt.yml@vz_oke_letencrypt_cert
+  install_v8o_oke_oci_pub_dns:
+    uses: ta9846/git-actions-demo/.github/workflows/deploy_vz_oke_oci_pub_dns.yml@vz_oke_oci_public_dns
     needs: create_oke_admin_cluster
     with: 
        username: ta9846
@@ -47,7 +47,7 @@ jobs:
      
   deploy_hello_helidon_on_multi_cluster:
     uses: ta9846/git-actions-demo/.github/workflows/install_hello_helidon_oke_mc.yml@vz_oke_multi_cluster
-    needs: install_v8o_oke_letsencrypt_oci_dns
+    needs: install_v8o_oke_oci_pub_dns
     with: 
        CLUSTER_NAME: cluster1
     secrets:
