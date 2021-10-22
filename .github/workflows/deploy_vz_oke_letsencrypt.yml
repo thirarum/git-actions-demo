@@ -30,6 +30,8 @@ on:
         required: true
       VZ_OCI_DNSZONE_NAME:
         required: true
+      VZ_DNSZONE_PREFIX:
+        required: true
 jobs:
   install_v8o:
     runs-on: ubuntu-latest
