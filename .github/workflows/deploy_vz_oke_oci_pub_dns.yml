@@ -1,4 +1,4 @@
-name: Deploy Verrazzano using Letsencrypt and OCI DNS
+name: Deploy Verrazzano using OCI Public DNS
 on:
   workflow_call:
     inputs:
@@ -105,11 +105,10 @@ jobs:
           
           kubectl get verrazzano
 
-          cd /home/runner
-          git clone https://github.com/verrazzano/verrazzano.git
-          cd verrazzano/platform-operator/scripts/install
-          sed -i 's/$VERRAZZANO_INSTALL_NS/default/g' create_oci_config_secret.sh
-
+          curl -o create_oci_config_secret.sh \
+            https://raw.githubusercontent.com/verrazzano/verrazzano/v1.0.1/platform-operator/scripts/install/create_oci_config_secret.sh
+          chmod +x create_oci_config_secret.sh
+          
           export KUBE_CONTEXT=$(kubectl config get-contexts -o=name)
           echo "KUBE_CONTEXT=${KUBE_CONTEXT}" >> $GITHUB_ENV
           echo "Current kube context===> $KUBE_CONTEXT"
@@ -130,12 +129,6 @@ jobs:
             profile: dev
             environmentName: ${{secrets.VZ_DNSZONE_PREFIX}}
             components:
-              certManager:
-                certificate:
-                  acme:
-                    provider: letsEncrypt
-                    emailAddress: ${{secrets.VZ_ACME_EMAIL}}
-                    environment: staging
               dns:
                 oci:
                   ociConfigSecret: oci
