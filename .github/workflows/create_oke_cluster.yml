@@ -276,7 +276,7 @@ jobs:
             oci iam availability-domain list \
               --compartment-id $COMPARTMENT_ID \
               --query 'data[*].name' | \
-              grep -i phx | \
+              grep -i ash | \
                 sed 's/"//g' | \
                 sed 's/ //g' | \
                 sed 's/,//g' | \
