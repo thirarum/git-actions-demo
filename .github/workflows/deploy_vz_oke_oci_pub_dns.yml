@@ -122,7 +122,7 @@ jobs:
             name: ${{secrets.VZ_INSTALLATION_NAME}}
           spec:
             profile: dev
-            environmentName: ${{secrets.VZ_DNSZONE_PREFIX}}
+            environmentName: testenv
             components:
               dns:
                 oci:
