@@ -1,5 +1,5 @@
 name: Setup Verrazzano on OKE using OCI Public DNS
-on: [push]
+on: [tt]
 jobs:
   create_oke_admin_cluster:
     uses: ta9846/git-actions-demo/.github/workflows/create_oke_cluster.yml@vz_oke_multi_cluster
