@@ -110,7 +110,7 @@ jobs:
           spec:
             profile: ${VZ_PROFILE}
             defaultVolumeSource:
-                emptyDir: {}
+                emptyDir: \{\}
           EOF          
 
           sleep 5
