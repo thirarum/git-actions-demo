@@ -1,10 +1,5 @@
 name: Install Verrazzano on OKE using Custom CRDs
-on: [push]
-env:
-  VZ_CRD_FILENAME: vz-crd/vz_crd_disable_persistent_storage.yml
-  VZ_INSTALLATION_NAME: wlsqa-verrazzano
-  VZ_PROFILE: prod
-  TEST_ENV_OCI_REGION: ${{ secrets.OCI_REGION }}
+on: [tt]
 jobs:
   create_oke_admin_cluster:
     uses: ta9846/git-actions-demo/.github/workflows/create_oke_cluster.yml@vz_oke_multi_cluster
@@ -31,6 +26,10 @@ jobs:
   install_v8o_custom_crd:
     uses: ta9846/git-actions-demo/.github/workflows/deploy_vz_oke.yml@develop
     needs: create_oke_admin_cluster
+    with:
+      VZ_CRD_FILENAME: vz-crd/vz_crd_disable_persistent_storage.yml
+      VZ_INSTALLATION_NAME: wlsqa-verrazzano
+      VZ_PROFILE: prod
     secrets:
       OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
       OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
