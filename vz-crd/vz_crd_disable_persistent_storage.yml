@@ -1,7 +1,7 @@
 apiVersion: install.verrazzano.io/v1alpha1
 kind: Verrazzano
 metadata:
-  name: ${{secrets.VZ_INSTALLATION_NAME}}
+  name: ${VZ_INSTALLATION_NAME}
 spec:
   profile: ${VZ_PROFILE}
   defaultVolumeSource:
