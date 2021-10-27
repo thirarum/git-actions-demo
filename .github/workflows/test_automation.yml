@@ -1,5 +1,7 @@
 name: Test automation
-on: [push]
+on: [tt]
 jobs:
   test_checkout:
     uses: ta9846/git-actions-demo/.github/workflows/deploy_vz_oke.yml@develop
+    with: 
+       vz_crd_filename: vz-crd/vz_crd_disable_persistent_storage.yml
