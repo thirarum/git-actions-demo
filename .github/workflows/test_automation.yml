@@ -1,7 +1,67 @@
-name: Test automation
-on: [push]
+name: Install Verrazzano on OKE using Custom CRDs
+on: [tt]
 jobs:
-  test_checkout:
+  create_oke_admin_cluster:
+    uses: ta9846/git-actions-demo/.github/workflows/create_oke_cluster.yml@vz_oke_multi_cluster
+    if: always()
+    secrets:
+      OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+      OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+      OCI_REGION: ${{ secrets.OCI_REGION }}
+      OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+      OCI_KEY_FILE: ${{ secrets.OCI_KEY_FILE }}
+      API_ENDPOINT_SEC_LIST_INGRESS_DATA: ${{ secrets.API_ENDPOINT_SEC_LIST_INGRESS_DATA }}
+      API_ENDPOINT_SEC_LIST_EGRESS_DATA: ${{ secrets.V8OQA_API_ENDPOINT_SEC_LIST_EGRESS_DATA }}
+      NODE_SEC_LIST_INGRESS_DATA: ${{ secrets.NODE_SEC_LIST_INGRESS_DATA }}
+      NODE_SEC_LIST_EGRESS_DATA: ${{ secrets.V8OQA_NODE_SEC_LIST_EGRESS_DATA }}
+      COMPARTMENT_NAME: ${{ secrets.COMPARTMENT_NAME }}
+      VCN_NAME: ${{ secrets.VCN_NAME }}admin
+      DNS_LABEL: ${{ secrets.DNS_LABEL }}admin
+      K8S_VERSION: ${{ secrets.K8S_VERSION }}
+      CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
+      NODE_IMAGE: ${{ secrets.NODE_IMAGE }}
+      NODE_POOL_SIZE: ${{ secrets.NODE_POOL_SIZE }}
+      NODE_SHAPE: ${{ secrets.NODE_SHAPE }}
+      
+  install_v8o_custom_crd:
     uses: ta9846/git-actions-demo/.github/workflows/deploy_vz_oke.yml@develop
     with: 
-       vz_crd_filename: vz-crd/vz_crd_disable_persistent_storage.yml
+       VZ_CRD_FILENAME: vz-crd/vz_crd_disable_persistent_storage.yml
+       VZ_INSTALLATION_NAME: wlsqa-verrazzano
+       VZ_PROFILE: prod       
+    secrets:
+      OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+      OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+      OCI_REGION: ${{ secrets.OCI_REGION }}
+      OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+      OCI_KEY_FILE: ${{ secrets.OCI_KEY_FILE }}
+      COMPARTMENT_NAME: ${{ secrets.COMPARTMENT_NAME }}
+      CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
+
+  deploy_hello_helidon_on_multi_cluster:
+    uses: ta9846/git-actions-demo/.github/workflows/install_hello_helidon_oke_mc.yml@vz_oke_multi_cluster
+    needs: install_v8o_custom_crd
+    with: 
+       CLUSTER_NAME: cluster1
+    secrets:
+      OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+      OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+      OCI_REGION: ${{ secrets.OCI_REGION }}
+      OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+      OCI_KEY_FILE: ${{ secrets.OCI_KEY_FILE }}
+      COMPARTMENT_NAME: ${{ secrets.COMPARTMENT_NAME }}
+
+  cleanup-oke_admin_cluster:
+    uses: ta9846/git-actions-demo/.github/workflows/cleanup_oke_cluster.yml@vz_oke_multi_cluster
+    needs: deploy_hello_helidon_on_multi_cluster
+    if: always()
+    secrets: 
+      OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+      OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+      OCI_REGION: ${{ secrets.OCI_REGION }}
+      OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+      OCI_KEY_FILE: ${{ secrets.OCI_KEY_FILE }}
+      COMPARTMENT_NAME: ${{ secrets.COMPARTMENT_NAME }}
+      VCN_NAME: ${{ secrets.VCN_NAME }}admin
+      DNS_LABEL: ${{ secrets.DNS_LABEL }}admin
+      CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
