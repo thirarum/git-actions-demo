@@ -1,0 +1,15 @@
+name: Test checkout
+on:
+  workflow_call:
+jobs:
+  test_checkout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout develop branch
+        uses: actions/checkout@v2
+        with:
+          ref: develop
+        run: |
+          echo $(pwd)
+          cd vz-crd
+          ls
