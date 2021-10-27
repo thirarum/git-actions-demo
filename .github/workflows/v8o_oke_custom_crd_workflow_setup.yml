@@ -30,8 +30,6 @@ jobs:
       
   install_v8o_custom_crd:
     uses: ta9846/git-actions-demo/.github/workflows/deploy_vz_oke.yml@develop
-    with: 
-       username: ta9846
     secrets:
       OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
       OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
