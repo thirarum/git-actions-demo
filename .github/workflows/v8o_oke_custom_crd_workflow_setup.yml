@@ -30,6 +30,7 @@ jobs:
       
   install_v8o_custom_crd:
     uses: ta9846/git-actions-demo/.github/workflows/deploy_vz_oke.yml@develop
+    needs: create_oke_admin_cluster
     secrets:
       OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
       OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
@@ -39,7 +40,7 @@ jobs:
       COMPARTMENT_NAME: ${{ secrets.COMPARTMENT_NAME }}
       CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
 
-  deploy_hello_helidon_on_multi_cluster:
+  deploy_hello_helidon:
     uses: ta9846/git-actions-demo/.github/workflows/install_hello_helidon_oke_mc.yml@vz_oke_multi_cluster
     needs: install_v8o_custom_crd
     with: 
@@ -54,7 +55,7 @@ jobs:
 
   cleanup-oke_admin_cluster:
     uses: ta9846/git-actions-demo/.github/workflows/cleanup_oke_cluster.yml@vz_oke_multi_cluster
-    needs: deploy_hello_helidon_on_multi_cluster
+    needs: deploy_hello_helidon
     if: always()
     secrets: 
       OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
