@@ -121,8 +121,7 @@ jobs:
           kubectl get verrazzano
 
           echo "=================================================="
-          echo "Install Verrazzano by disabling default storage"
-          echo "https://verrazzano.io/docs/setup/install/customizing/storage/#customize-persistence-globally-using-defaultvolumesource"
+          echo "Install Verrazzano: ${{inputs.VZ_INSTALLATION_NAME}}"
           echo "=================================================="
 
           kubectl apply -f ${VZ_CRD_FILENAME}
