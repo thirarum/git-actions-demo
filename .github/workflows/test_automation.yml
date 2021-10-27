@@ -1,0 +1,5 @@
+name: Test automation
+on: [push]
+jobs:
+  test_checkout:
+    uses: ta9846/git-actions-demo/.github/workflows/deploy_vz_oke.yml@develop
