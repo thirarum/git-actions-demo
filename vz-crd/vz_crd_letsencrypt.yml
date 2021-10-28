@@ -4,7 +4,6 @@ metadata:
   name: VZ_INSTALLATION_NAME
 spec:
   profile: VZ_PROFILE
-  environmentName: VZ_DNSZONE_PREFIX
   components:
     certManager:
       certificate:
