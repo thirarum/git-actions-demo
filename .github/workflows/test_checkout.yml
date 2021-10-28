@@ -4,7 +4,10 @@ on:
     inputs:
       vz_crd_filename:
         required: false
-        type: string  
+        type: string
+      CUSTOM_CA_OPTION:
+        required: false
+        type: boolean
 jobs:
   test_checkout:
     runs-on: ubuntu-latest
@@ -14,7 +17,9 @@ jobs:
         with:
           ref: develop
       - name: List checked-out files
+        if: ${{inputs.CUSTOM_CA_OPTION}}
         run: |
           echo $(pwd)
           cat ${{ inputs.vz_crd_filename }}
+          echo ${{inputs.CUSTOM_CA_OPTION}}
   
