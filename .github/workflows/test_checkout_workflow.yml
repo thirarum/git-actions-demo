@@ -1,8 +1,0 @@
-name: Test checkout workflow
-on: [push]
-jobs:
-  test_checkout:
-    uses: ta9846/git-actions-demo/.github/workflows/test_checkout.yml@develop
-    if: always()
-    with:
-      vz_crd_filename: vz-crd/vz_crd_default.yml
