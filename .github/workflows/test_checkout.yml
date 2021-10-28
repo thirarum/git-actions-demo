@@ -19,7 +19,10 @@ jobs:
       - name: List checked-out files
         if: ${{inputs.CUSTOM_CA_OPTION}}
         run: |
+          echo "Custom CA option is true"
           echo $(pwd)
           cat ${{ inputs.vz_crd_filename }}
           echo ${{inputs.CUSTOM_CA_OPTION}}
-  
+      - name: Check boolean input
+        if: ${{inputs.CUSTOM_CA_OPTION}} == false
+        run: echo "Custom CA option is false"          
