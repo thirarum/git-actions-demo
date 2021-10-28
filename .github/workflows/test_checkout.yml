@@ -1,4 +1,4 @@
-name: Deploy Verrazzano
+name: Test checkout
 on:
   workflow_call:
     inputs:
