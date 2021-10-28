@@ -1,0 +1,14 @@
+apiVersion: install.verrazzano.io/v1alpha1
+kind: Verrazzano
+metadata:
+  name: VZ_INSTALLATION_NAME
+spec:
+  profile: VZ_PROFILE
+  environmentName: VZ_DNSZONE_PREFIX
+  components:
+    certManager:
+      certificate:
+        acme:
+          provider: letsEncrypt
+          emailAddress: VZ_ACME_EMAIL
+          environment: staging
