@@ -12,17 +12,20 @@ jobs:
   test_checkout:
     runs-on: ubuntu-latest
     steps:
+      - name: Export env
+        env:
+          ca_option: ${{inputs.CUSTOM_CA_OPTION}}
       - name: Checkout develop branch
         uses: actions/checkout@v2
         with:
           ref: develop
       - name: List checked-out files
-        if: ${{inputs.CUSTOM_CA_OPTION}}
+        if: env.ca_option == "true"
         run: |
           echo "Custom CA option is true"
           echo $(pwd)
           cat ${{ inputs.vz_crd_filename }}
           echo ${{inputs.CUSTOM_CA_OPTION}}
       - name: Run if CUSTOM_CA_OPTION is false
-        if: ${{inputs.CUSTOM_CA_OPTION}} == "false"
+        if: env.ca_option == "false"
         run: echo "Custom CA option is false"          
