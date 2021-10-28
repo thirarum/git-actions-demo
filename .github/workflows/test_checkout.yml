@@ -23,6 +23,6 @@ jobs:
           echo $(pwd)
           cat ${{ inputs.vz_crd_filename }}
           echo ${{inputs.CUSTOM_CA_OPTION}}
-      - name: Check boolean input
-        if: ${{inputs.CUSTOM_CA_OPTION}} == false
+      - name: Run if CUSTOM_CA_OPTION is false
+        if: ${{ ${{inputs.CUSTOM_CA_OPTION}} == false }}
         run: echo "Custom CA option is false"          
