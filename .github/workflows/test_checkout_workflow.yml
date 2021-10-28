@@ -2,7 +2,7 @@ name: Test checkout workflow
 on: [push]
 jobs:
   test_checkout:
-    uses: ta9846/git-actions-demo/.github/workflows/create_oke_cluster.yml@vz_oke_multi_cluster
+    uses: ta9846/git-actions-demo/.github/workflows/test_checkout.yml@develop
     if: always()
     with:
       vz_crd_filename: vz_crd_default.yml
