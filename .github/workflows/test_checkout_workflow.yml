@@ -5,5 +5,5 @@ jobs:
     uses: ta9846/git-actions-demo/.github/workflows/test_checkout.yml@develop
     if: always()
     with:
-      vz_crd_filename: vz_crd_default.yml
+      vz_crd_filename: vz_crd/vz_crd_default.yml
       CUSTOM_CA_OPTION: true
