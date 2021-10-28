@@ -6,4 +6,4 @@ jobs:
     if: always()
     with:
       vz_crd_filename: vz-crd/vz_crd_default.yml
-      CUSTOM_CA_OPTION: true
+      CUSTOM_CA_OPTION: false
