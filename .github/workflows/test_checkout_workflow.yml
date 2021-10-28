@@ -1,0 +1,7 @@
+name: Test checkout workflow setup
+on: [push]
+jobs:
+  test_checkout:
+    uses: ta9846/git-actions-demo/.github/workflows/test_checkout.yml@develop
+    with: 
+       vz_crd_filename: hai
