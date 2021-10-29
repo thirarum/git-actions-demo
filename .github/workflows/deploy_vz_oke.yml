@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       DNS_WILDCARD_DOMAIN:
-        required: true
+        required: false
         type: string
     secrets:
       OCI_USER_OCID:
@@ -29,7 +29,9 @@ on:
         required: true
       CLUSTER_NAME:
         required: true
-
+      VZ_ACME_EMAIL:
+        required: false
+        
 jobs:
   install_v8o:
     runs-on: ubuntu-latest
@@ -73,6 +75,7 @@ jobs:
           sed -i "s|VZ_INSTALLATION_NAME|${{inputs.VZ_INSTALLATION_NAME}}|g" $VZ_CRD_FILENAME
           sed -i "s|VZ_PROFILE|${{inputs.VZ_PROFILE}}|g" $VZ_CRD_FILENAME
           sed -i "s|DNS_WILDCARD_DOMAIN|${{inputs.DNS_WILDCARD_DOMAIN}}|g" $VZ_CRD_FILENAME
+          sed -i "s|VZ_ACME_EMAIL|${{secrets.VZ_ACME_EMAIL}}|g" $VZ_CRD_FILENAME
 
           cat ${VZ_CRD_FILENAME}
           
