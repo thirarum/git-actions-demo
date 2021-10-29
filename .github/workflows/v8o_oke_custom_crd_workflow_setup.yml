@@ -39,6 +39,7 @@ jobs:
       OCI_KEY_FILE: ${{ secrets.OCI_KEY_FILE }}
       COMPARTMENT_NAME: ${{ secrets.COMPARTMENT_NAME }}
       CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
+      VZ_ACME_EMAIL: ${{ secrets.VZ_ACME_EMAIL }}
 
   deploy_hello_helidon:
     uses: ta9846/git-actions-demo/.github/workflows/install_hello_helidon_oke_mc.yml@vz_oke_multi_cluster
