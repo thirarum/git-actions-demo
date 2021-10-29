@@ -1,7 +1,13 @@
 name: Test checkout workflow setup
 on: [pull_request]
+env:
+  ADMIN_CLUSTER_NAME: admin-cluster
+  VZ_CRD_FILENAME: vz-crd/vz_crd_default.yml
+  VZ_INSTALLATION_NAME: wlsqa-verrazzano
+  CUSTOM_CA_OPTION: false
 jobs:
   test_checkout:
     uses: ta9846/git-actions-demo/.github/workflows/test_checkout.yml@develop
     with: 
-       CUSTOM_CA_OPTION: false
+       CUSTOM_CA_OPTION: $CUSTOM_CA_OPTION
+       ADMIN_CLUSTER_NAME: $ADMIN_CLUSTER_NAME
