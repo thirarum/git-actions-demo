@@ -4,4 +4,4 @@ jobs:
   test_checkout:
     uses: ta9846/git-actions-demo/.github/workflows/test_checkout.yml@develop
     with: 
-       CUSTOM_CA_OPTION: true
+       CUSTOM_CA_OPTION: false
