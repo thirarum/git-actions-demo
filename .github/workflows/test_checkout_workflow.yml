@@ -1,12 +1,9 @@
 name: Test checkout workflow setup
 on: [push]
-env:
-  VZ_CRD_FILENAME: vz-crd/vz_crd_default.yml
-  VZ_INSTALLATION_NAME: wlsqa-verrazzano
-  CUSTOM_CA_OPTION: true
+
 jobs:
   test_checkout:
     uses: ta9846/git-actions-demo/.github/workflows/test_checkout.yml@develop
     with: 
-       CUSTOM_CA_OPTION: env.CUSTOM_CA_OPTION
-       VZ_CRD_FILENAME: env.VZ_CRD_FILENAME
+       CUSTOM_CA_OPTION: true
+       VZ_CRD_FILENAME: vz-crd/vz_crd_default.yml
