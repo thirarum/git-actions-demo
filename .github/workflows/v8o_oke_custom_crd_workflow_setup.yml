@@ -11,6 +11,9 @@ env:
   DNS_WILDCARD_DOMAIN: nip.io
   CUSTOM_CA_TEST: false
   CUSTOM_CA_SECRET_NAME: customca
+  PUBLIC_DNS_TEST: false
+  DNS_ZONE_PREFIX: qaenv
+  DNS_ZONE_NAME: gitaction.v8o.io
   
 jobs:
   create_oke_admin_cluster:
@@ -46,6 +49,9 @@ jobs:
       CLUSTER_NAME: $ADMIN_CLUSTER_NAME
       CUSTOM_CA_TEST: $CUSTOM_CA_TEST
       CUSTOM_CA_SECRET_NAME: $CUSTOM_CA_SECRET_NAME
+      PUBLIC_DNS_TEST: $PUBLIC_DNS_TEST
+      DNS_ZONE_PREFIX: $DNS_ZONE_PREFIX
+      DNS_ZONE_NAME: $DNS_ZONE_NAME
       
     secrets:
       OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
@@ -55,6 +61,8 @@ jobs:
       OCI_KEY_FILE: ${{ secrets.OCI_KEY_FILE }}
       COMPARTMENT_NAME: ${{ secrets.COMPARTMENT_NAME }}
       VZ_ACME_EMAIL: ${{ secrets.VZ_ACME_EMAIL }}
+      DNS_ZONE_COMPARTMENT_ID: ${{ secrets.VZ_OCI_DNSZONE_COMPARTMENT_ID }}
+      DNS_ZONE_ID: ${{ secrets.VZ_OCI_DNSZONE_ID }}
 
   deploy_hello_helidon:
     uses: ta9846/git-actions-demo/.github/workflows/install_hello_helidon_oke_mc.yml@vz_oke_multi_cluster
