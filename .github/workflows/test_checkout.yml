@@ -15,6 +15,9 @@ jobs:
       - name: Export env
         env:
           ca_option: ${{inputs.CUSTOM_CA_OPTION}}
+        run: |
+          echo "env.ca_option: ${{env.ca_option}}"
+          echo "input.ca_option: ${{inputs.ca_option}}"
       - name: Checkout develop branch
         uses: actions/checkout@v2
         with:
