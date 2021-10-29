@@ -10,4 +10,4 @@ jobs:
     uses: ta9846/git-actions-demo/.github/workflows/test_checkout.yml@develop
     with: 
        CUSTOM_CA_OPTION: $CUSTOM_CA_OPTION
-       ADMIN_CLUSTER_NAME: $ADMIN_CLUSTER_NAME
+       CLUSTER_NAME: $ADMIN_CLUSTER_NAME
