@@ -1,5 +1,5 @@
 name: Test checkout workflow setup
-on: [pull_request]
+on: [push]
 jobs:
   test_checkout:
     uses: ta9846/git-actions-demo/.github/workflows/test_checkout.yml@develop
