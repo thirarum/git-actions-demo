@@ -2,7 +2,7 @@ name: Test checkout
 on:
   workflow_call:
     inputs:
-      vz_crd_filename:
+      VZ_CRD_FILENAME:
         required: false
         type: string
       CUSTOM_CA_OPTION:
@@ -21,14 +21,14 @@ jobs:
         with:
           ref: develop
       
-      - name: List checked-out files
+      - name: Run if option is true
         if: contains(inputs.CUSTOM_CA_OPTION, 'true')
         run: |
           echo "Custom CA option is true"
           echo $(pwd)
-          cat ${{ inputs.vz_crd_filename }}
+          cat ${{ inputs.VZ_CRD_FILENAME }}
           echo ${{inputs.CUSTOM_CA_OPTION}}
       
-      - name: Run if CUSTOM_CA_OPTION is false
+      - name: Run if option is false
         if: contains(inputs.CUSTOM_CA_OPTION, 'false')
         run: echo "Custom CA option is false"          
