@@ -30,6 +30,7 @@ jobs:
       VZ_CRD_FILENAME: vz-crd/vz_crd_pvc_global_and_local_override.yml
       VZ_INSTALLATION_NAME: wlsqa-verrazzano
       VZ_PROFILE: prod
+      DNS_WILDCARD_DOMAIN: nip.io
     secrets:
       OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
       OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
