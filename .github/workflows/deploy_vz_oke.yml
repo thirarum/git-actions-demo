@@ -11,6 +11,9 @@ on:
       VZ_PROFILE:
         required: true
         type: string
+      DNS_WILDCARD_DOMAIN:
+        required: true
+        type: string
     secrets:
       OCI_USER_OCID:
         required: true
@@ -69,6 +72,7 @@ jobs:
         run: |
           sed -i "s|VZ_INSTALLATION_NAME|${{inputs.VZ_INSTALLATION_NAME}}|g" $VZ_CRD_FILENAME
           sed -i "s|VZ_PROFILE|${{inputs.VZ_PROFILE}}|g" $VZ_CRD_FILENAME
+          sed -i "s|DNS_WILDCARD_DOMAIN|${{inputs.DNS_WILDCARD_DOMAIN}}|g" $VZ_CRD_FILENAME
 
           cat ${VZ_CRD_FILENAME}
           
