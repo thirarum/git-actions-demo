@@ -2,6 +2,9 @@ name: Deploy Verrazzano
 on:
   workflow_call:
     inputs:
+      CLUSTER_NAME:
+        required: true
+        type: string
       VZ_CRD_FILENAME: 
         required: true
         type: string
@@ -14,6 +17,22 @@ on:
       DNS_WILDCARD_DOMAIN:
         required: false
         type: string
+      CUSTOM_CA_TEST:
+        required: false
+        type: string
+      CUSTOM_CA_SECRET_NAME:
+        required: false
+        type: string
+      PUBLIC_DNS_TEST:
+        required: false
+        type: string
+      DNS_ZONE_PREFIX:
+        required: false
+        type: string
+      DNS_ZONE_NAME:
+        required: false
+        type: string
+        
     secrets:
       OCI_USER_OCID:
         required: true
@@ -27,9 +46,11 @@ on:
         required: true
       COMPARTMENT_NAME:
         required: true
-      CLUSTER_NAME:
-        required: true
       VZ_ACME_EMAIL:
+        required: false
+      DNS_ZONE_COMPARTMENT_ID:
+        required: false
+      DNS_ZONE_ID:
         required: false
         
 jobs:
@@ -55,15 +76,10 @@ jobs:
           echo "/home/runner/bin" >> $GITHUB_PATH
           exec -l $SHELL
           
-      - name: 'Fix Config File Permissions and setup environment variables'
+      - name: 'Fix Config File Permissions'
         run: |
           oci setup repair-file-permissions --file ~/.oci/config
           oci setup repair-file-permissions --file ~/.oci/key.pem
-          
-          echo "VZ_CRD_FILENAME=${{inputs.VZ_CRD_FILENAME}}" >> $GITHUB_ENV
-          echo "VZ_INSTALLATION_NAME=${{inputs.VZ_INSTALLATION_NAME}}" >> $GITHUB_ENV
-          echo "VZ_PROFILE=${{inputs.VZ_PROFILE}}" >> $GITHUB_ENV
-          echo "TEST_ENV_OCI_REGION=${{inputs.TEST_ENV_OCI_REGION}}" >> $GITHUB_ENV
 
       - name: Checkout develop branch
         uses: actions/checkout@v2
@@ -76,6 +92,11 @@ jobs:
           sed -i "s|VZ_PROFILE|${{inputs.VZ_PROFILE}}|g" $VZ_CRD_FILENAME
           sed -i "s|DNS_WILDCARD_DOMAIN|${{inputs.DNS_WILDCARD_DOMAIN}}|g" $VZ_CRD_FILENAME
           sed -i "s|VZ_ACME_EMAIL|${{secrets.VZ_ACME_EMAIL}}|g" $VZ_CRD_FILENAME
+          sed -i "s|CUSTOM_CA_SECRET_NAME|${{inputs.CUSTOM_CA_SECRET_NAME}}|g" $VZ_CRD_FILENAME
+          sed -i "s|DNS_ZONE_PREFIX|${{inputs.DNS_ZONE_PREFIX}}|g" $VZ_CRD_FILENAME
+          sed -i "s|DNS_ZONE_COMPARTMENT_ID|${{secrets.DNS_ZONE_COMPARTMENT_ID}}|g" $VZ_CRD_FILENAME
+          sed -i "s|DNS_ZONE_ID|${{secrets.DNS_ZONE_ID}}|g" $VZ_CRD_FILENAME
+          sed -i "s|DNS_ZONE_NAME|${{inputs.DNS_ZONE_NAME}}|g" $VZ_CRD_FILENAME
 
           cat ${VZ_CRD_FILENAME}
           
@@ -94,12 +115,12 @@ jobs:
           CMD="oci ce cluster list \
             --compartment-id $COMPARTMENT_ID \
             --query 'data[?\"name\"==\`CLUSTER_NAME\` && \"lifecycle-state\"!=\`DELETED\`].id'"
-          CMD=$(sed -e "s/\CLUSTER_NAME/${{secrets.CLUSTER_NAME}}/g" <<< $CMD)
+          CMD=$(sed -e "s/\CLUSTER_NAME/${{inputs.CLUSTER_NAME}}/g" <<< $CMD)
           CLUSTER_ID=$(eval $(echo "$CMD | grep ocid | sed 's/\"//g' | sed 's/ //g'"))
           echo "CLUSTER_ID=${CLUSTER_ID}" >> $GITHUB_ENV
 
           mkdir ~/k8s_dir
-          KUBECONFIG_FILE=/home/runner/k8s_dir/${{secrets.CLUSTER_NAME}}.conf
+          KUBECONFIG_FILE=/home/runner/k8s_dir/${{inputs.CLUSTER_NAME}}.conf
           rm -rf $KUBECONFIG_FILE
 
           oci ce cluster create-kubeconfig \
@@ -115,7 +136,38 @@ jobs:
           export KUBECONFIG=$KUBECONFIG
           kubectl version 
           kubectl get nodes
+
+      - name: Create Custom CA
+        if: contains(inputs.CUSTOM_CA_TEST, 'true')
+        run: |
+          export KUBECONFIG=$KUBECONFIG
+          echo "Generate a CA private key"
+          openssl genrsa -out tls.key 2048
           
+          echo "Create a self signed certificate with the 'signing' option set"
+          openssl req \
+            -x509 -new -nodes -key tls.key -subj "/CN=*.${{inputs.DNS_WILDCARD_DOMAIN}}" \
+            -days 365 -reqexts v3_req -extensions v3_ca \
+            -out tls.crt
+          echo "Save signing key pair as a Kubernetes secret"
+          kubectl create ns ${{inputs.CUSTOM_CA_SECRET_NAME}}-ns
+          kubectl create secret tls ${{inputs.CUSTOM_CA_SECRET_NAME}} \
+            --namespace=${{inputs.CUSTOM_CA_SECRET_NAME}}-ns \
+            --cert=tls.crt \
+            --key=tls.key
+          
+      - name: Create Default OCI Secret for Public DNS Configuration
+        if: contains(inputs.PUBLIC_DNS_TEST, 'true')
+        run: |
+          export KUBECONFIG=$KUBECONFIG
+          curl -o create_oci_config_secret.sh \
+            https://raw.githubusercontent.com/verrazzano/verrazzano/v1.0.1/platform-operator/scripts/install/create_oci_config_secret.sh
+          chmod +x create_oci_config_secret.sh
+          ./create_oci_config_secret.sh
+          
+          sleep 10
+          kubectl get secrets
+            
       - name: Install V8o
         run: |
           export KUBECONFIG=$KUBECONFIG
