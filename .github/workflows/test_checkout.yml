@@ -23,12 +23,12 @@ jobs:
         with:
           ref: develop
       - name: List checked-out files
-        if: ${ca_option} == "true"
+        if: env.ca_option.contains("true")
         run: |
           echo "Custom CA option is true"
           echo $(pwd)
           cat ${{ inputs.vz_crd_filename }}
           echo ${{inputs.CUSTOM_CA_OPTION}}
       - name: Run if CUSTOM_CA_OPTION is false
-        if: ${ca_option} == "false"
+        if: env.ca_option.contains("false")
         run: echo "Custom CA option is false"          
