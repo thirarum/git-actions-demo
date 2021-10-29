@@ -1,5 +1,17 @@
 name: Install Verrazzano on OKE using Custom CRDs
+
 on: [pull_request]
+
+env:
+  ADMIN_CLUSTER_NAME: admin-cluster
+  MANAGED_CLUSTER_NAME: managed-cluster
+  VZ_CRD_FILENAME: vz-crd/vz_crd_pvc_global_and_local_override.yml
+  VZ_INSTALLATION_NAME: wlsqa-verrazzano
+  VZ_PROFILE: prod
+  DNS_WILDCARD_DOMAIN: nip.io
+  CUSTOM_CA_TEST: false
+  CUSTOM_CA_SECRET_NAME: customca
+  
 jobs:
   create_oke_admin_cluster:
     uses: ta9846/git-actions-demo/.github/workflows/create_oke_cluster.yml@vz_oke_multi_cluster
@@ -27,10 +39,14 @@ jobs:
     uses: ta9846/git-actions-demo/.github/workflows/deploy_vz_oke.yml@develop
     needs: create_oke_admin_cluster
     with:
-      VZ_CRD_FILENAME: vz-crd/vz_crd_pvc_global_and_local_override.yml
-      VZ_INSTALLATION_NAME: wlsqa-verrazzano
-      VZ_PROFILE: prod
-      DNS_WILDCARD_DOMAIN: nip.io
+      VZ_CRD_FILENAME: $VZ_CRD_FILENAME
+      VZ_INSTALLATION_NAME: $VZ_INSTALLATION_NAME
+      VZ_PROFILE: $VZ_PROFILE
+      DNS_WILDCARD_DOMAIN: $DNS_WILDCARD_DOMAIN
+      CLUSTER_NAME: $ADMIN_CLUSTER_NAME
+      CUSTOM_CA_TEST: $CUSTOM_CA_TEST
+      CUSTOM_CA_SECRET_NAME: $CUSTOM_CA_SECRET_NAME
+      
     secrets:
       OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
       OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
@@ -38,14 +54,13 @@ jobs:
       OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
       OCI_KEY_FILE: ${{ secrets.OCI_KEY_FILE }}
       COMPARTMENT_NAME: ${{ secrets.COMPARTMENT_NAME }}
-      CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
       VZ_ACME_EMAIL: ${{ secrets.VZ_ACME_EMAIL }}
 
   deploy_hello_helidon:
     uses: ta9846/git-actions-demo/.github/workflows/install_hello_helidon_oke_mc.yml@vz_oke_multi_cluster
     needs: install_v8o_custom_crd
     with: 
-       CLUSTER_NAME: cluster1
+       CLUSTER_NAME: $ADMIN_CLUSTER_NAME
     secrets:
       OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
       OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
