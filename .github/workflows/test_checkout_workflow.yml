@@ -9,5 +9,5 @@ jobs:
   test_checkout:
     uses: ta9846/git-actions-demo/.github/workflows/test_checkout.yml@develop
     with: 
-       CUSTOM_CA_OPTION: $CUSTOM_CA_OPTION
-       VZ_CRD_FILENAME: $VZ_CRD_FILENAME
+       CUSTOM_CA_OPTION: env.CUSTOM_CA_OPTION
+       VZ_CRD_FILENAME: env.VZ_CRD_FILENAME
