@@ -34,7 +34,7 @@ jobs:
       VZ_PROFILE: prod
       DNS_WILDCARD_DOMAIN: nip.io
       CLUSTER_NAME: admin-cluster
-      CUSTOM_CA_TEST: false
+      CUSTOM_CA_TEST: true
       CUSTOM_CA_SECRET_NAME: customca
       PUBLIC_DNS_TEST: false
       DNS_ZONE_PREFIX: qaenv
