@@ -29,7 +29,7 @@ jobs:
     uses: ta9846/git-actions-demo/.github/workflows/deploy_vz_oke.yml@develop
     needs: create_oke_admin_cluster
     with:
-      VZ_CRD_FILENAME: vz-crd/vz_crd_default.yml
+      VZ_CRD_FILENAME: vz-crd/vz_crd_custom_ca_cert.yml
       VZ_INSTALLATION_NAME: wlsqa-verrazzano
       VZ_PROFILE: prod
       DNS_WILDCARD_DOMAIN: nip.io
