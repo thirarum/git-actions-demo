@@ -4,6 +4,7 @@ metadata:
   name: VZ_INSTALLATION_NAME
 spec:
   profile: VZ_PROFILE
+  environmentName: DNS_ZONE_PREFIX
   components:
     certManager:
       certificate:
@@ -11,3 +12,9 @@ spec:
           provider: letsEncrypt
           emailAddress: VZ_ACME_EMAIL
           environment: staging
+    dns:
+      oci:
+        ociConfigSecret: oci
+        dnsZoneCompartmentOCID: DNS_ZONE_COMPARTMENT_ID
+        dnsZoneOCID: DNS_ZONE_ID
+        dnsZoneName: DNS_ZONE_NAME          
