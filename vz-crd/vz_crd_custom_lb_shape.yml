@@ -1,0 +1,16 @@
+apiVersion: install.verrazzano.io/v1alpha1
+kind: Verrazzano
+metadata:
+  name: VZ_INSTALLATION_NAME
+spec:
+  profile: VZ_PROFILE
+  components:
+    ingress:
+      type: LoadBalancer
+      nginxInstallArgs:
+        - name: controller.service.annotations."service\.beta\.kubernetes\.io/oci-load-balancer-shape"
+          value: flexible
+        - name: controller.service.annotations."service\.beta\.kubernetes\.io/oci-load-balancer-shape-flex-min"
+          value: "10"
+        - name: controller.service.annotations."service\.beta\.kubernetes\.io/oci-load-balancer-shape-flex-max"
+          value: "100"
