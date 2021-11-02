@@ -1,0 +1,26 @@
+apiVersion: install.verrazzano.io/v1alpha1
+kind: Verrazzano
+metadata:
+  name: VZ_INSTALLATION_NAME
+spec:
+  profile: VZ_PROFILE
+  components:
+    ingress:
+      type: LoadBalancer
+      nginxInstallArgs:
+        - name: controller.service.annotations."service\.beta\.kubernetes\.io/oci-load-balancer-shape"
+          value: flexible
+        - name: controller.service.annotations."service\.beta\.kubernetes\.io/oci-load-balancer-shape-flex-min"
+          value: "10"
+        - name: controller.service.annotations."service\.beta\.kubernetes\.io/oci-load-balancer-shape-flex-max"
+          value: "100"
+        - name: controller.service.annotations."service\.beta\.kubernetes\.io/oci-load-balancer-health-check-retries"
+          value: "2"
+        - name: controller.service.annotations."service\.beta\.kubernetes\.io/oci-load-balancer-health-check-timeout"
+          value: "1000"
+        - name: controller.service.annotations."service\.beta\.kubernetes\.io/oci-load-balancer-health-check-interval"
+          value: "5000"
+        - name: controller.service.annotations."service\.beta\.kubernetes\.io/oci-load-balancer-connection-idle-timeout"
+          value: "100"
+        - name: controller.service.annotations."service\.beta\.kubernetes\.io/oci-load-balancer-backend-protocol"
+          value: "TCP"          
