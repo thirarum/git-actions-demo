@@ -1,0 +1,22 @@
+apiVersion: install.verrazzano.io/v1alpha1
+kind: Verrazzano
+metadata:
+  name: VZ_INSTALLATION_NAME
+spec:
+  profile: VZ_PROFILE
+  components:
+    ingress:
+      type: NodePort
+      ports:
+       - name: status-port
+         nodePort: 31172
+         port: 15021
+         protocol: TCP
+         targetPort: 15021
+       - name: http2
+         nodePort: 31426
+         port: 80
+         protocol: TCP
+         targetPort: 8080
+       - name: https
+         nodePort: 31320
