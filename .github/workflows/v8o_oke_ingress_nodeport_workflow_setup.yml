@@ -1,7 +1,5 @@
 name: Install Verrazzano on OKE using Custom CRDs
-
-on: [push]
-  
+on: [tt]
 jobs:
   create_oke_admin_cluster:
     uses: ta9846/git-actions-demo/.github/workflows/create_oke_cluster.yml@vz_oke_multi_cluster
@@ -29,17 +27,9 @@ jobs:
     uses: ta9846/git-actions-demo/.github/workflows/deploy_vz_oke.yml@develop
     needs: create_oke_admin_cluster
     with:
-      VZ_CRD_FILENAME: vz-crd/vz_crd_custom_lb.yml
+      VZ_CRD_FILENAME: vz-crd/vz_crd_ingress_custom_nodeport.yml
       VZ_INSTALLATION_NAME: wlsqa-verrazzano
       VZ_PROFILE: prod
-      DNS_WILDCARD_DOMAIN: nip.io
-      CLUSTER_NAME: admin-cluster
-      CUSTOM_CA_TEST: false
-      CUSTOM_CA_SECRET_NAME: customca
-      PUBLIC_DNS_TEST: false
-      DNS_ZONE_PREFIX: qaenv
-      DNS_ZONE_NAME: gitaction.v8o.io
-      
     secrets:
       OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
       OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
@@ -47,15 +37,13 @@ jobs:
       OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
       OCI_KEY_FILE: ${{ secrets.OCI_KEY_FILE }}
       COMPARTMENT_NAME: ${{ secrets.COMPARTMENT_NAME }}
-      VZ_ACME_EMAIL: ${{ secrets.VZ_ACME_EMAIL }}
-      DNS_ZONE_COMPARTMENT_ID: ${{ secrets.VZ_OCI_DNSZONE_COMPARTMENT_ID }}
-      DNS_ZONE_ID: ${{ secrets.VZ_OCI_DNSZONE_ID }}
+      CLUSTER_NAME: ${{ secrets.CLUSTER_NAME }}
 
   deploy_hello_helidon:
     uses: ta9846/git-actions-demo/.github/workflows/install_hello_helidon_oke_mc.yml@vz_oke_multi_cluster
     needs: install_v8o_custom_crd
     with: 
-       CLUSTER_NAME: admin-cluster
+       CLUSTER_NAME: cluster1
     secrets:
       OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
       OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
