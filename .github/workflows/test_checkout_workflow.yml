@@ -1,9 +1,0 @@
-name: Test checkout workflow setup
-on: [pull_request]
-
-jobs:
-  test_checkout:
-    uses: ta9846/git-actions-demo/.github/workflows/test_checkout.yml@develop
-    with: 
-       CUSTOM_CA_OPTION: true
-       VZ_CRD_FILENAME: vz-crd/vz_crd_default.yml
