@@ -30,6 +30,7 @@ jobs:
       VZ_CRD_FILENAME: vz-crd/vz_crd_ingress_custom_nodeport.yml
       VZ_INSTALLATION_NAME: wlsqa-verrazzano
       VZ_PROFILE: prod
+      CLUSTER_NAME: cluster1
     secrets:
       OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
       OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
