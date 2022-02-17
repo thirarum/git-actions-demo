@@ -1,6 +1,6 @@
 name: Install Verrazzano on OKE using Custom CRDs
 
-on: [push]
+on: [tt]
   
 jobs:
   create_oke_admin_cluster:
