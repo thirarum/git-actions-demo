@@ -7,16 +7,18 @@ spec:
   components:
     ingress:
       type: NodePort
+      nginxInstallArgs:
+       - name: controller.service.externalIPs
+         valueList:
+          - 150.230.184.190
       ports:
-       - name: status-port
-         nodePort: 31172
-         port: 15021
-         protocol: TCP
-         targetPort: 15021
-       - name: http2
-         nodePort: 31426
+       - name: custom-http-port
+         nodePort: 30080
          port: 80
          protocol: TCP
-         targetPort: 8080
-       - name: https
-         nodePort: 31320
+         targetPort: 80
+       - name: custom-https-port
+         nodePort: 30443
+         port: 443
+         protocol: TCP
+         targetPort: 443
