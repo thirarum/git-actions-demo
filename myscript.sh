@@ -1,11 +1,20 @@
 #!/bin/bash
 
-echo "java -version"
-java -version
+TESTDIR=~/testdir
+TESTFILE=~/testdir/testout.txt
 
-echo "ifconfig"
-ifconfig
+mkdir -p $TESTDIR
+rm -rf $TESTFILE
 
-echo "hostname: " hostname -f
+echo "java -version" &>> $TESTFILE
+java -version &>> $TESTFILE
 
-echo "Script execution is completed."
+echo "ifconfig" &>> $TESTFILE
+ifconfig &>> $TESTFILE
+
+echo "hostname: " &>> $TESTFILE
+hostname -f  &>> $TESTFILE
+
+echo "Script execution is completed."  &>> $TESTFILE
+
+cat $TESTFILE
