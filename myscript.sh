@@ -10,7 +10,7 @@ echo "java -version" &>> $TESTFILE
 java -version &>> $TESTFILE
 
 echo "ifconfig" &>> $TESTFILE
-ifconfig &>> $TESTFILE
+/sbin/ifconfig &>> $TESTFILE
 
 echo "hostname: " &>> $TESTFILE
 hostname -f  &>> $TESTFILE
