@@ -6,4 +6,4 @@ wget https://raw.githubusercontent.com/thirarum/git-actions-demo/patch-1/myscrip
 cp myscript.sh $USER_HOME
 chown oracle:oracle $USER_HOME/myscript.sh
 chmod +x $USER_HOME/myscript.sh
-runuser -l oracle -c "sh $USER_HOME/myscript.sh"
+runuser -l oracle -c ". $USER_HOME/myscript.sh"
