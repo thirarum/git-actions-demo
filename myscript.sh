@@ -3,18 +3,18 @@
 TESTDIR=~/testdir
 TESTFILE=~/testdir/testout.txt
 
-mkdir -p $TESTDIR
-rm -rf $TESTFILE
+runuser -l oracle -c "mkdir -p $TESTDIR"
+runuser -l oracle -c "rm -rf $TESTFILE"
 
-echo "java -version" &>> $TESTFILE
-java -version &>> $TESTFILE
+runuser -l oracle -c "echo 'java -version' &>> $TESTFILE"
+runuser -l oracle -c "java -version &>> $TESTFILE"
 
-echo "ifconfig" &>> $TESTFILE
-ifconfig &>> $TESTFILE
+runuser -l oracle -c "echo 'ifconfig' &>> $TESTFILE"
+runuser -l oracle -c "ifconfig &>> $TESTFILE"
 
-echo "hostname: " &>> $TESTFILE
-hostname -f  &>> $TESTFILE
+runuser -l oracle -c "echo 'hostname: ' &>> $TESTFILE"
+runuser -l oracle -c "hostname -f  &>> $TESTFILE"
 
-echo "Script execution is completed."  &>> $TESTFILE
+runuser -l oracle -c "echo 'Script execution is completed.'  &>> $TESTFILE"
 
-cat $TESTFILE
+runuser -l oracle -c "cat $TESTFILE"
