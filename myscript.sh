@@ -1,3 +1,5 @@
+#!/bin/bash
+
 TESTDIR=/home/oracle/testdir
 TESTFILE=/home/oracle/testdir/testout.txt
 
