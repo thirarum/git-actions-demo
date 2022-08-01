@@ -9,21 +9,22 @@ echo "AKS cluster: $clusterName"
 echo "====================="
 echo "Installing Azure CLI"
 echo "====================="
-sudo curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash 
+curl -sL https://aka.ms/InstallAzureCLIDeb | bash 
 az --version
+az aks get-versions -l eastus -o table
 
 echo "==========================="
 echo "Installing kubectl client"
 echo "==========================="
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
-sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+#echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
+install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 kubectl version --client
 
 echo "==========================="
 echo "Install jq for log parsing"
 echo "==========================="
-sudo apt install jq
+apt install jq
 
 echo "================================="
 echo "Obtain KUBECONFIG through az CLI"
