@@ -3,28 +3,27 @@
 resourceGroup=$1
 clusterName=$2
 
-echo "Resource Group: $resourceGroup"
 echo "AKS cluster: $clusterName"
 
-echo "====================="
-echo "Installing Azure CLI"
-echo "====================="
-curl -sL https://aka.ms/InstallAzureCLIDeb | bash 
+echo "========================"
+echo "Check Azure CLI version"
+echo "========================"
 az --version
-az aks get-versions -l eastus -o table
 
 echo "==========================="
 echo "Installing kubectl client"
 echo "==========================="
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-#echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
-install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+az aks install-cli
+echo "kubectl version"
+ret=$(kubectl --help)
 kubectl version --client
 
 echo "==========================="
 echo "Install jq for log parsing"
 echo "==========================="
-apt install jq
+JQ=/usr/bin/jq
+curl https://stedolan.github.io/jq/download/linux64/jq > $JQ && chmod +x $JQ
+ls -la $JQ
 
 echo "================================="
 echo "Obtain KUBECONFIG through az CLI"
