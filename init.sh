@@ -75,7 +75,7 @@ do
        echo "Verrazzano installation is not complete even after 45 mins !!"
        exit 1
     fi
-    echo "Waiting for Verrazzano installation to be completed..."
+    # echo "Waiting for Verrazzano installation to be completed..."
     sleep 20s
     kubectl get verrazzano
     VZ_STATE=$(kubectl get verrazzano | grep vzonaks | awk {'print $2'})
@@ -83,7 +83,7 @@ do
     if [ "${VZ_STATE}" == "InstallFailed" ];
     then
        echo "Verrazzano installation failed!"
-       kubectl logs -f $(kubectl get pods | grep vzonaks |  awk {'print $1'})
+       kubectl -n verrazzano-install logs -f $(kubectl -n verrazzano-install get pods | grep verrazzano-platform-operator |  awk {'print $1'})
        exit 1
     fi
 done
@@ -102,17 +102,22 @@ VZ_CONSOLE_URL=$( \
         awk {'print $3'} \
     )
 
+KEYCLOAK_CONSOLE_URL=$( \
+    kubectl get ingress -n keycloak 2>&1 | \
+        grep keycloak | awk {'print $3'} \
+    )
+    
 CONSOLE_PWD=$( \
     kubectl get secret \
         --namespace verrazzano-system verrazzano -o jsonpath={.data.password} | base64 --decode; echo \
     )
 
-VZ_CONSOLE_STATUS=$(curl -k -s -I https://${VZ_CONSOLE_URL} | awk {'print $2'} | head -n 1)
-echo "vz_console_status: $VZ_CONSOLE_STATUS"
+KEYCLOAK_CONSOLE_STATUS=$(curl -k -s -I https://${KEYCLOAK_CONSOLE_URL} | awk {'print $2'} | head -n 1)
+echo "Keycloak console status: $KEYCLOAK_CONSOLE_STATUS"
 
-if [ "${VZ_CONSOLE_STATUS}" != "200" ];
+if [ "${KEYCLOAK_CONSOLE_STATUS}" != "200" ];
 then
-    echo "Error getting Verrazzano console!!!"
+    echo "Error getting Keycloak console!!!"
     exit 1
 fi
 
