@@ -126,4 +126,7 @@ echo "Verrazzano console url: https://${VZ_CONSOLE_URL}"
 echo "Verrazzano console password: ${CONSOLE_PWD}"
 echo "============================================="
 
+# Writing output to Azure CLI output
+result=$(echo "{ \"Verrazzano console url\": \"https://${VZ_CONSOLE_URL}\",  \"Verrazzano console password\": \"${CONSOLE_PWD}\" }")
+echo $result > $AZ_SCRIPTS_OUTPUT_PATH
 
