@@ -119,8 +119,6 @@ CONSOLE_PWD=$( \
         --namespace verrazzano-system verrazzano -o jsonpath={.data.password} | base64 --decode; echo \
     )
 
-echo $CONSOLE_PWD > info.log
-
 KEYCLOAK_CONSOLE_STATUS=$(curl -k -s -I https://${KEYCLOAK_CONSOLE_URL} | awk {'print $2'} | head -n 1)
 echo "Keycloak console status: $KEYCLOAK_CONSOLE_STATUS"
 
@@ -132,10 +130,10 @@ fi
 
 echo "============================================="
 echo "Verrazzano console url: https://${VZ_CONSOLE_URL}"
-echo "Access info: $(<info.log)"
+echo "Verrazzano console password: ${CONSOLE_PWD}"
 echo "============================================="
 
 # Writing output to Azure CLI output
-result=$(echo "{ \"Verrazzano console url\": \"https://${VZ_CONSOLE_URL}\",  \"Access info\": \"$(<info.log)\" }")
+result=$(echo "{ \"Verrazzano console url\": \"https://${VZ_CONSOLE_URL}\",  \"Verrazzano console password\": \"${CONSOLE_PWD}\" }")
 echo $result > $AZ_SCRIPTS_OUTPUT_PATH
 
