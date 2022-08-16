@@ -1,9 +1,12 @@
 #!/bin/bash
 
 resourceGroup=$1
-clusterName=$2
+aksClusterName=$2
+vzVersion=$3
+vzProfile=$4
 
-echo "AKS cluster: $clusterName"
+echo "RG: $resourceGroup"
+echo "AKS cluster: $aksClusterName"
 
 echo "========================"
 echo "Check Azure CLI version"
@@ -28,9 +31,13 @@ ls -la $JQ
 echo "================================="
 echo "Obtain KUBECONFIG through az CLI"
 echo "================================="
-az aks get-credentials --resource-group ${resourceGroup} --name ${clusterName} --file ${PWD}/${clusterName}.conf
+az aks get-credentials --resource-group ${resourceGroup} --name ${aksClusterName} --file ${PWD}/${aksClusterName}.conf
 
-export KUBECONFIG=${PWD}/${clusterName}.conf
+echo "==================="
+echo "Install Verrazzano"
+echo "==================="
+
+export KUBECONFIG=${PWD}/${aksClusterName}.conf
 
 kubectl version 
 result=$?
@@ -44,26 +51,26 @@ fi
 kubectl get nodes -o wide
 
 echo "Install Verrazzano Platform Operator"
-kubectl apply -f https://github.com/verrazzano/verrazzano/releases/download/v1.3.1/operator.yaml
+kubectl apply -f https://github.com/verrazzano/verrazzano/releases/download/${vzVersion}/operator.yaml
 
 sleep 5
 
 echo "Waiting for VZ operator installation to be completed..."
 kubectl -n verrazzano-install rollout status deployment/verrazzano-platform-operator
 
-echo "Install Verrazzano using 'dev' profile"
+echo "Install Verrazzano using '${vzProfile}' profile"
 kubectl apply -f - <<EOF
 apiVersion: install.verrazzano.io/v1alpha1
 kind: Verrazzano
 metadata:
-  name: vzonaks
+  name: aks-verrazzano
 spec:
-  profile: dev
+  profile: ${vzProfile:-dev}
 EOF
 
 sleep 10
 
-VZ_STATE=$(kubectl get verrazzano | grep verrazzano | awk {'print $2'})
+VZ_STATE=$(kubectl get verrazzano | grep aks-verrazzano | awk {'print $2'})
 echo "Verrazzano CRD status: $VZ_STATUS"
 
 wait_time=$(date -ud "45 minute" +%s)
@@ -78,7 +85,7 @@ do
     # echo "Waiting for Verrazzano installation to be completed..."
     sleep 20s
     kubectl get verrazzano
-    VZ_STATE=$(kubectl get verrazzano | grep vzonaks | awk {'print $2'})
+    VZ_STATE=$(kubectl get verrazzano | grep aks-verrazzano | awk {'print $2'})
 
     if [ "${VZ_STATE}" == "InstallFailed" ];
     then
