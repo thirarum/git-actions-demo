@@ -50,6 +50,8 @@ fi
 
 kubectl get nodes -o wide
 
+kubectl delete vz aks-verrazzano
+
 echo "Install Verrazzano Platform Operator"
 kubectl apply -f https://github.com/verrazzano/verrazzano/releases/download/${vzVersion}/operator.yaml
 
